@@ -1,0 +1,31 @@
+#app {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: left;
+}
+
+.form-row {
+  display: flex;
+  align-items:center;
+  margin-bottom: 10px;
+}
+
+.div-buttons {
+  justify-content: center;
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.form-row label {
+  width: 200px;
+}
+
+.form-row input {
+   flex: 1;
+}
+
+.myButton {
+  float: right;
+}
