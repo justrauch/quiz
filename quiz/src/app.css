@@ -18,6 +18,13 @@
   margin-bottom: 10px;
 }
 
+.logout {
+  justify-content: right;
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
 .form-row label {
   width: 200px;
 }
