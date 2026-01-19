@@ -1,4 +1,5 @@
-import { useState } from 'preact/hooks';
+import { useState, useEffect } from 'preact/hooks';
+import './app.css'
 
 interface Question { 
     id: number; 
@@ -20,8 +21,9 @@ interface EditQuizProps {
 export function Question({ editelement }: EditQuizProps) { 
     const [a_name, seta_Name] = useState("");
     const [answers, setanswers] = useState<Answer[]>([]);
+    const [selectedTrue, setselectedTrue] = useState("false");
 
-    const handleaddquestion = async (question_id: string, answer_text: string, is_true: string) => {
+    const handleaddanswer = async (question_id: string, answer_text: string, is_true: string) => {
       try {
         const formData = new FormData();
         formData.append("question_id", question_id);
@@ -41,13 +43,14 @@ export function Question({ editelement }: EditQuizProps) {
         }
 
         const data = await response.json();
+        handlegetallanswers(editelement?.id.toString() || "");
 
       } catch (error) {
         console.error(`Fehler beim ausloggen:`, error);
       }
     };
 
-    const handlegetallquestions = async (question_id: string) => {
+    const handlegetallanswers = async (question_id: string) => {
         try {
         const response = await fetch(`http://localhost:8000/quiz/question/${question_id}/answers`, {
             method: "GET",
@@ -62,24 +65,85 @@ export function Question({ editelement }: EditQuizProps) {
         }
         const data = await response.json();
         setanswers(data);
-        handlegetallquestions(editelement?.id.toString() || "");
 
         } catch (error) {
         console.error(`Fehler beim ausloggen:`, error);
         }
     };
 
+    const handledelete = async (answer_id: string) => {
+        try {
+        const formData = new FormData();
+        formData.append("answer_id", answer_id);
+        const response = await fetch(`http://localhost:8000/quiz/question/delete-answer`, {
+            method: "POST",
+            body: formData,
+            credentials: "include"
+        });
+
+        if (!response.ok) { 
+            const data = await response.json(); 
+            console.error(`Fehler beim abfragen`);
+            return; 
+        }
+
+        const data = await response.json();
+        handlegetallanswers(editelement?.id.toString() || "");
+
+        } catch (error) {
+        console.error(`Fehler beim ausloggen:`, error);
+        }
+    };
+
+    useEffect(() => {
+        if (editelement?.id) {
+            handlegetallanswers(editelement.id.toString());
+        }
+    }, [editelement?.id]);
+
     return ( 
         <div> 
-            <p>{editelement?.text} {editelement?.typ}</p>
+            <p>{editelement?.text}</p>
             {answers.map(a => (
-                <p>{a.text}</p>
+                <div class = "form-row box">
+                    <p>{a.text} ({a.is_true ? "Wahr" : "Falsch"})</p>
+                    <button onClick={() => handledelete(a.id.toString())}>X</button>
+                </div>
             ))}
-            <div class="form-row">
-                <label htmlFor="name">Antwort:</label>
-                <input type="text" id="name" name="name" maxlength={50} onInput={(e) => seta_Name((e.target as HTMLInputElement).value || "")}></input>
+            <div class = "box">
+                <h3 style = "text-align: center"> Anwort hinzufügen</h3>
+                <div class="form-row">
+                    <label htmlFor="name">Antwort:</label>
+                    <input type="text" id="name" name="name" maxlength={50} onInput={(e) => seta_Name((e.target as HTMLInputElement).value || "")}></input>
+                </div>
+                    <div class="form-row">
+                    <label htmlFor="name">Richtigkeit:</label>
+                    <div>
+                    <label>
+                        <input 
+                        type="radio" 
+                        name="public" 
+                        value="false" 
+                        checked={selectedTrue === "false"} 
+                        onChange={(e) => setselectedTrue((e.target as HTMLInputElement).value || "")}
+                        /> 
+                        Falsch
+                    </label>
+
+                    <label>
+                        <input 
+                        type="radio" 
+                        name="public" 
+                        value="true" 
+                        checked={selectedTrue === "true"} 
+                        onChange={(e) => setselectedTrue((e.target as HTMLInputElement).value || "")}
+                        /> 
+                        Richtig
+                    </label>
+                    </div>
+                </div>
+                <button style="  display: block; margin-left: auto;" onClick={() => {handleaddanswer(editelement?.id.toString() || "", a_name, selectedTrue)}}>hinzufügen</button>
             </div>
-            <button onClick={() => {handleaddquestion(editelement?.id.toString() || "", a_name, "false")}}>hinzufügen</button>
         </div> 
     ); 
 }

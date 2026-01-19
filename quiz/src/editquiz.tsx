@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import { Question } from './Question';
+import './app.css'
 
 interface Quiz { 
     id: number; 
@@ -115,6 +116,30 @@ export function EditQuiz({ editelement }: EditQuizProps) {
       }
     };
 
+    const handledeletequestion = async (question_id: string) => {
+        try {
+        const formData = new FormData();
+        formData.append("question_id", question_id);
+        const response = await fetch(`http://localhost:8000/quiz/delete-question`, {
+            method: "POST",
+            body: formData,
+            credentials: "include"
+        });
+
+        if (!response.ok) { 
+            const data = await response.json(); 
+            console.error(`Fehler beim abfragen`);
+            return; 
+        }
+
+        const data = await response.json();
+        handlegetallquestions(editelement?.id.toString() || "");
+
+        } catch (error) {
+        console.error(`Fehler beim ausloggen:`, error);
+        }
+    };
+
     return (
         <div> 
             <div class="div-buttons">
@@ -128,10 +153,14 @@ export function EditQuiz({ editelement }: EditQuizProps) {
                     {errormessageaddquiz}
                     </span>
                 )}
+                <div class = "box">
+                <h3 style="text-align: center">Frage erstellen</h3>
                 <div class="form-row">
                   <label htmlFor="name">Frage:</label>
                   <input type="text" id="name" name="name" maxlength={50} onInput={(e) => setquest_Name((e.target as HTMLInputElement).value || "")}></input>
                 </div>
+                <div class="form-row">
+                    <label htmlFor="name">Typ:</label>
                     <select
                       value={selectvalue}
                       onChange={(e) => setselectvalue((e.target as HTMLSelectElement).value)}
@@ -140,19 +169,28 @@ export function EditQuiz({ editelement }: EditQuizProps) {
                       <option value="Wahr/Falsch">Wahr/Falsch</option>
                       <option value="Text Antwort">Text Antwort</option>
                     </select>
-                <button onClick={() => {handleaddquestion(quest_name, selectvalue);}}>Absenden</button>
+                </div>
+                <button class = "myButton" onClick={() => {handleaddquestion(quest_name, selectvalue);}}>hinzufügen</button>
+                </div>
                   <table>
                     <tbody>
                     {questions.map(q => (
                       <tr>
                         <td>
+                          <div class = "box">
+                          <div class = "form-row">
+                          <h3 style="text-align: center;">{q.typ}</h3>
+                          <button onClick={() => {handledeletequestion(q.id.toString())}}>X</button>
+                          </div>
                           <Question editelement={q}></Question>
+                          </div>
                         </td>
                       </tr>
                     ))}
                     </tbody>
                   </table>
-                </div>}
+                </div>
+                }
             {!showquestions &&
             <form>
               {showerror && (
