@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Form, Response, Cookie, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine, Column, Integer, String, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, desc, cast
 from sqlalchemy.orm import declarative_base, Session
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from passlib.context import CryptContext
@@ -50,6 +50,14 @@ class Answer(Base):
     text = Column(String(255), nullable=False)
     question_id = Column(Integer, nullable=False)
     is_true = Column(Boolean, nullable=False)
+
+class Score(Base):
+    __tablename__ = "score_table"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, nullable=False)
+    quiz_id = Column(Integer, nullable=False)
+    score = Column(String(50), nullable=False)
 
 SQLALCHEMY_DATABASE_URL = "mysql+pymysql://root@host.docker.internal:3306/quiz"
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
@@ -233,8 +241,15 @@ def delete_quiz(quiz_id: int = Form(...), session_id: str | None = Cookie(defaul
             raise HTTPException(status_code=404, detail="Nicht gefunden")
 
         session.delete(quiz)
-        session.commit()
-        return {"message": "Quiz gelöscht"}
+        try:
+            session.commit()
+            return {"message": "Quiz gelöscht"}
+        except SQLAlchemyError:
+            session.rollback()
+            raise HTTPException(status_code=500, detail="SQL Fehler")
+        except Exception:
+            session.rollback()
+            raise HTTPException(status_code=500, detail="Unbekannter Fehler")
 
 
 @app.get("/quiz/{quiz_id}/questions")
@@ -251,9 +266,6 @@ def question_get_all(quiz_id: int, session_id: str | None = Cookie(default=None)
         quiz = session.query(Quiz).filter(Quiz.id == quiz_id).first()
         if not quiz:
             raise HTTPException(status_code=404, detail="Quiz nicht gefunden")
-
-        if quiz.creater != user.id:
-            raise HTTPException(status_code=403, detail="Keine Berechtigung")
 
         questions = session.query(Question).filter(Question.quiz_id == quiz.id).all()
         return [
@@ -281,9 +293,17 @@ def add_question(quiz_id: int = Form(...), question_text: str = Form(...), typ: 
             raise HTTPException(status_code=403, detail="Kein Quiz vorhanden oder keine Berechtigung")
 
         new_question = Question(text=question_text, quiz_id=quiz.id, typ=typ)
+
         session.add(new_question)
-        session.commit()
-        return {"message": "Question erstellt"}
+        try:
+            session.commit()
+            return {"message": "Question erstellt"}
+        except SQLAlchemyError:
+            session.rollback()
+            raise HTTPException(status_code=500, detail="SQL Fehler")
+        except Exception:
+            session.rollback()
+            raise HTTPException(status_code=500, detail="Unbekannter Fehler")
 
 
 @app.post("/quiz/edit-question")
@@ -305,8 +325,16 @@ def edit_question(question_id: int = Form(...), question_text: str = Form(...), 
 
         question.text = question_text
         question.typ = typ
-        session.commit()
-        return {"message": "Question bearbeitet"}
+
+        try:
+            session.commit()
+            return {"message": "Question bearbeited"}
+        except SQLAlchemyError:
+            session.rollback()
+            raise HTTPException(status_code=500, detail="SQL Fehler")
+        except Exception:
+            session.rollback()
+            raise HTTPException(status_code=500, detail="Unbekannter Fehler")
 
 
 @app.post("/quiz/delete-question")
@@ -327,8 +355,15 @@ def delete_question(question_id: int = Form(...), session_id: str | None = Cooki
             raise HTTPException(status_code=403, detail="Keine Berechtigung")
 
         session.delete(question)
-        session.commit()
-        return {"message": "Question gelöscht"}
+        try:
+            session.commit()
+            return {"message": "Question gelöscht"}
+        except SQLAlchemyError:
+            session.rollback()
+            raise HTTPException(status_code=500, detail="SQL Fehler")
+        except Exception:
+            session.rollback()
+            raise HTTPException(status_code=500, detail="Unbekannter Fehler")
 
 
 @app.get("/quiz/question/{question_id}/answers")
@@ -346,10 +381,6 @@ def answer_get_all(question_id: int, session_id: str | None = Cookie(default=Non
         if not question:
             raise HTTPException(status_code=404, detail="Question nicht gefunden")
 
-        quiz = session.query(Quiz).filter(Quiz.id == question.quiz_id).first()
-        if not quiz or quiz.creater != user.id:
-            raise HTTPException(status_code=403, detail="Keine Berechtigung")
-
         answers = session.query(Answer).filter(Answer.question_id == question.id).all()
         return [
             {
@@ -363,7 +394,7 @@ def answer_get_all(question_id: int, session_id: str | None = Cookie(default=Non
 
 
 @app.post("/quiz/question/add-answer")
-def add_answer(question_id: int = Form(...), answer_text: str = Form(...), is_true: bool = Form(...), session_id: str | None = Cookie(default=None)):
+def add_answer(question_id: int = Form(...), answer_text: str = Form(...), is_true: bool = Form(...), typ: str = Form(...), session_id: str | None = Cookie(default=None)):
     if not session_id or session_id not in sessions:
         raise HTTPException(status_code=401, detail="Nicht eingeloggt")
 
@@ -379,10 +410,26 @@ def add_answer(question_id: int = Form(...), answer_text: str = Form(...), is_tr
         if quiz.creater != user.id:
             raise HTTPException(status_code=403, detail="Keine Berechtigung")
 
+        anz = len(session.query(Answer).filter(Answer.question_id == question_id).all())
+        if (typ == "Wahr/Falsch" and anz >= 1) or (typ == "Text Antwort" and anz == 1):
+            raise HTTPException(status_code=409, detail="Maximale Anzahl an Antworten erreicht")
+            
         answer = Answer(text=answer_text, question_id=question.id, is_true=is_true)
         session.add(answer)
-        session.commit()
-        return {"message": "Answer erstellt"}
+
+        if (typ == "Wahr/Falsch" and anz == 0):
+            answer = Answer(text=("Falsch" if answer_text == "Wahr" else "Wahr"), question_id=question.id, is_true=not is_true)
+            session.add(answer)
+            
+        try:
+            session.commit()
+            return {"message": "Answer erstellt"}
+        except SQLAlchemyError:
+            session.rollback()
+            raise HTTPException(status_code=500, detail="SQL Fehler")
+        except Exception:
+            session.rollback()
+            raise HTTPException(status_code=500, detail="Unbekannter Fehler")
 
 
 @app.post("/quiz/question/edit-answer")
@@ -405,8 +452,15 @@ def edit_answer(answer_id: int = Form(...), answer_text: str = Form(...), is_tru
 
         answer.text = answer_text
         answer.is_true = is_true
-        session.commit()
-        return {"message": "Answer bearbeitet"}
+        try:
+            session.commit()
+            return {"message": "Answer bearbeitet"}
+        except SQLAlchemyError:
+            session.rollback()
+            raise HTTPException(status_code=500, detail="SQL Fehler")
+        except Exception:
+            session.rollback()
+            raise HTTPException(status_code=500, detail="Unbekannter Fehler")
 
 
 @app.post("/quiz/question/delete-answer")
@@ -428,5 +482,77 @@ def delete_answer(answer_id: int = Form(...), session_id: str | None = Cookie(de
             raise HTTPException(status_code=403, detail="Keine Berechtigung")
 
         session.delete(answer)
-        session.commit()
-        return {"message": "Answer gelöscht"}
+        try:
+            session.commit()
+            return {"message": "answer gelöscht"}
+        except SQLAlchemyError:
+            session.rollback()
+            raise HTTPException(status_code=500, detail="SQL Fehler")
+        except Exception:
+            session.rollback()
+            raise HTTPException(status_code=500, detail="Unbekannter Fehler")
+
+@app.get("/user/scores")
+def score_get_all_user(session_id: str | None = Cookie(default=None)):
+    if not session_id or session_id not in sessions:
+        raise HTTPException(status_code=401, detail="Nicht eingeloggt")
+
+    with Session(engine) as session:
+        username = sessions[session_id]
+        user_id = session.query(User).filter(User.name == username).first().id
+
+        scores = session.query(Score, Quiz).join(Quiz, Score.quiz_id == Quiz.id).filter(Score.user_id == user_id).order_by(desc(cast(Score.score, Integer))).all()
+        if not scores:
+            raise HTTPException(status_code=404, detail="Score nicht gefunden")
+
+        return [
+            {"quiz_name": quiz.name, "score": score.score}
+            for score, quiz in scores
+        ]
+
+
+@app.get("/quiz/{quiz_id}/scores")
+def score_get_all_quiz(quiz_id: int, session_id: str | None = Cookie(default=None)):
+    if not session_id or session_id not in sessions:
+        raise HTTPException(status_code=401, detail="Nicht eingeloggt")
+
+    with Session(engine) as session:
+        quiz = session.query(Quiz).filter(Quiz.id == quiz_id).first()
+        if not quiz:
+            raise HTTPException(status_code=404, detail="Quiz nicht gefunden")
+
+        scores = session.query(Score, User).join(User, Score.user_id == User.id).filter(Score.quiz_id == quiz_id).order_by(desc(cast(Score.score, Integer))).all()
+        if not scores:
+            raise HTTPException(status_code=404, detail="Score nicht gefunden")
+
+        return [
+            {"user_name": user.name, "score": score.score}
+            for score, user in scores
+        ]
+
+
+@app.post("/user/quiz/score/add-score")
+def add_score(quiz_id: str = Form(...), score: str = Form(...), session_id: str | None = Cookie(default=None)):
+    if not session_id or session_id not in sessions:
+        raise HTTPException(status_code=401, detail="Nicht eingeloggt")
+
+    with Session(engine) as session:
+        username = sessions[session_id]
+        user = session.query(User).filter(User.name == username).first()
+        user_id = user.id
+        quiz = session.query(Quiz).filter(Quiz.id == quiz_id).first()
+        if not user or not quiz:
+            raise HTTPException(status_code=404, detail="User oder Quiz nicht gefunden")
+
+        existing_score = session.query(Score).filter(Score.user_id == user_id).first()
+        if existing_score:
+            existing_score.score = score
+        else:
+            new_score = Score(user_id=user_id, quiz_id=quiz_id, score=score)
+            session.add(new_score)
+        try:
+            session.commit()
+            return {"message": "Score erstellt"}
+        except Exception as e:
+            session.rollback()
+            raise HTTPException(status_code=500, detail=f"Fehler: {str(e)}")

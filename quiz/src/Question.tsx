@@ -22,6 +22,9 @@ export function Question({ editelement }: EditQuizProps) {
     const [a_name, seta_Name] = useState("");
     const [answers, setanswers] = useState<Answer[]>([]);
     const [selectedTrue, setselectedTrue] = useState("false");
+    const [showerroransw, seterroransw] = useState(false);
+    const [errormessageansw, seterrormessageansw] = useState("");
+    const [errorcolor, seterrorcolor] = useState("rot");
 
     const handleaddanswer = async (question_id: string, answer_text: string, is_true: string) => {
       try {
@@ -29,6 +32,7 @@ export function Question({ editelement }: EditQuizProps) {
         formData.append("question_id", question_id);
         formData.append("answer_text", answer_text);
         formData.append("is_true", is_true);
+        formData.append("typ", editelement?.typ.toString() || "");
         const response = await fetch("http://localhost:8000/quiz/question/add-answer", {
           method: "POST",
           body: formData,
@@ -38,10 +42,14 @@ export function Question({ editelement }: EditQuizProps) {
 
         if (!response.ok) { 
             const data = await response.json(); 
+            seterrorcolor("red")
+            seterrormessageansw(response.status === 409 || response.status === 401 ? data.detail : "Server Error versuchen sie es erneut");
             console.error(data.detail);
             return; 
         }
 
+        seterrorcolor("green");
+        seterrormessageansw("Änderung wurde vorgenommen")
         const data = await response.json();
         handlegetallanswers(editelement?.id.toString() || "");
 
@@ -57,12 +65,12 @@ export function Question({ editelement }: EditQuizProps) {
             credentials: "include"
         });
 
-
         if (!response.ok) { 
             const data = await response.json(); 
             console.error(data.detail);
             return; 
         }
+
         const data = await response.json();
         setanswers(data);
 
@@ -103,7 +111,6 @@ export function Question({ editelement }: EditQuizProps) {
 
     return ( 
         <div> 
-            <p>{editelement?.text}</p>
             {answers.map(a => (
                 <div class = "form-row box">
                     <p>{a.text} ({a.is_true ? "Wahr" : "Falsch"})</p>
@@ -112,6 +119,11 @@ export function Question({ editelement }: EditQuizProps) {
             ))}
             <div class = "box">
                 <h3 style = "text-align: center"> Anwort hinzufügen</h3>
+                {showerroransw && (
+                    <span style={{ color: errorcolor || "red" }}>
+                    {errormessageansw}
+                    </span>
+                )}
                 <div class="form-row">
                     <label htmlFor="name">Antwort:</label>
                     <input type="text" id="name" name="name" maxlength={50} onInput={(e) => seta_Name((e.target as HTMLInputElement).value || "")}></input>
@@ -122,7 +134,7 @@ export function Question({ editelement }: EditQuizProps) {
                     <label>
                         <input 
                         type="radio" 
-                        name="public" 
+                        name={`public-${editelement?.id}`} 
                         value="false" 
                         checked={selectedTrue === "false"} 
                         onChange={(e) => setselectedTrue((e.target as HTMLInputElement).value || "")}
@@ -133,7 +145,7 @@ export function Question({ editelement }: EditQuizProps) {
                     <label>
                         <input 
                         type="radio" 
-                        name="public" 
+                        name={`public-${editelement?.id}`}
                         value="true" 
                         checked={selectedTrue === "true"} 
                         onChange={(e) => setselectedTrue((e.target as HTMLInputElement).value || "")}
@@ -142,7 +154,7 @@ export function Question({ editelement }: EditQuizProps) {
                     </label>
                     </div>
                 </div>
-                <button style="  display: block; margin-left: auto;" onClick={() => {handleaddanswer(editelement?.id.toString() || "", a_name, selectedTrue)}}>hinzufügen</button>
+                <button style="  display: block; margin-left: auto;" onClick={() => {handleaddanswer(editelement?.id.toString() || "", a_name, selectedTrue)}} disabled={ a_name.trim() === ""}>hinzufügen</button>
             </div>
         </div> 
     ); 

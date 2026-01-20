@@ -70,8 +70,6 @@ export function EditQuiz({ editelement }: EditQuizProps) {
             credentials: "include"
         });
 
-        seterroraddquiz(true);
-
         if (!response.ok) { 
             const data = await response.json(); 
             console.error(data.detail);
@@ -140,6 +138,31 @@ export function EditQuiz({ editelement }: EditQuizProps) {
         }
     };
 
+    const handleeditquestion = async (quiz_id : string, question_text: string, questions_type: string) => {
+      try {
+        const formData = new FormData();
+        formData.append("quiz_id", editelement?.id.toString() || "");
+        formData.append("question_text", question_text);
+        formData.append("typ", questions_type);
+        const response = await fetch("http://localhost:8000/quiz/edit-question", {
+          method: "POST",
+          body: formData,
+          credentials: "include"
+        })
+
+
+        if (!response.ok) { 
+            const data = await response.json(); 
+            console.error(data.detail);
+            return; 
+        }
+        const data = await response.json();
+
+      } catch (error) {
+        console.error(`Fehler beim ausloggen:`, error);
+      }
+    };
+
     return (
         <div> 
             <div class="div-buttons">
@@ -170,7 +193,7 @@ export function EditQuiz({ editelement }: EditQuizProps) {
                       <option value="Text Antwort">Text Antwort</option>
                     </select>
                 </div>
-                <button class = "myButton" onClick={() => {handleaddquestion(quest_name, selectvalue);}}>hinzufügen</button>
+                <button class = "myButton" onClick={() => {handleaddquestion(quest_name, selectvalue);}} disabled={ quest_name.trim() === ""}>hinzufügen</button>
                 </div>
                   <table>
                     <tbody>
@@ -178,11 +201,12 @@ export function EditQuiz({ editelement }: EditQuizProps) {
                       <tr>
                         <td>
                           <div class = "box">
-                          <div class = "form-row">
-                          <h3 style="text-align: center;">{q.typ}</h3>
-                          <button onClick={() => {handledeletequestion(q.id.toString())}}>X</button>
-                          </div>
-                          <Question editelement={q}></Question>
+                            <div class = "form-row">
+                              <button class = "myButton" onClick={() => {handledeletequestion(q.id.toString())}}>X</button>
+                            </div>
+                            <h3 style="text-align: center;">{q.typ}</h3>
+                            <p>{q.text}</p>
+                            <Question editelement={q}></Question>
                           </div>
                         </td>
                       </tr>

@@ -29,6 +29,7 @@ class User(Base):
     password = Column(String(255), nullable=False)
 
     quizzes = relationship("Quiz", back_populates="creator", cascade="all, delete-orphan")
+    user_scores = relationship("Score", back_populates="user_score", cascade="all, delete-orphan")
 
 
 class Quiz(Base):
@@ -41,6 +42,7 @@ class Quiz(Base):
 
     creator = relationship("User", back_populates="quizzes")
     questions = relationship("Question", back_populates="quiz", cascade="all, delete-orphan")
+    quiz_scores = relationship("Score", back_populates="uquiz_score", cascade="all, delete-orphan")
 
 
 class Question(Base):
@@ -64,5 +66,16 @@ class Answer(Base):
     is_true = Column(Boolean, nullable=False)
 
     question = relationship("Question", back_populates="answers")
+
+class Score(Base):
+    __tablename__ = "score_table"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    quiz_id = Column(Integer, ForeignKey("quiz_table.id", ondelete="CASCADE"), nullable=False)
+    score = Column(String(50), nullable=False)
+
+    user_score = relationship("User", back_populates="user_scores")
+    uquiz_score = relationship("Quiz", back_populates="quiz_scores")
 
 Base.metadata.create_all(bind=engine)

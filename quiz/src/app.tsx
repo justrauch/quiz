@@ -82,7 +82,10 @@ export function App() {
         <button onClick={() => { setlogin(false); setsignup(true); setmainpage(false);}}>Regestrieren</button>
       </div>}
 
-      {showmainpage && <Quiz></Quiz>}
+      {showmainpage && <div>
+        <Quiz></Quiz>
+        <button onClick={() =>{setlogin(true); handlelogout();}}>Abmelden</button>
+        </div>}
       <div>
 
       {showerror && (

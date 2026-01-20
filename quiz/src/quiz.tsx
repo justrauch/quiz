@@ -1,17 +1,29 @@
 import { useState } from 'preact/hooks';
 import { EditQuiz } from './editquiz';
+import { StartQuiz } from './startquiz';
 
 export function Quiz(){
 
       const [showmyquiz, setshowmyquiz] = useState(false);
+      const [showquizscore, setshowquizscore] = useState(false);
+      const [showmyscores, setshowmyscores] = useState(false);
       const [showmyedit, setshowmyedit] = useState(false);
-    
+      const [startmyquiz, setstartmyquiz] = useState(false);
+      const [startelement, setstartelement] = useState<Quiz | undefined>(undefined);
+      const [is_public, setis_public] = useState(false);
       const [showmyquizbutton, setshowmyquizbutton] = useState(true);
       const [q_name, setq_Name] = useState("");
       const [selectedPublic, setSelectedPublic] = useState("false");
       const [showerroraddquiz, seterroraddquiz] = useState(false)
       const [errormessageaddquiz, seterrormessageaddquiz] = useState("");
-    
+
+      interface Score {
+        user_name: string;
+        quiz_name: string;
+        score: number;
+      }
+      const [scores, setScores] = useState<Score[]>([]);
+
       interface Quiz {
         id: number;
         name: string;
@@ -36,6 +48,50 @@ export function Quiz(){
 
         const data = await response.json();
         setqiuzzes(data);
+
+        } catch (error) {
+        console.error(`Fehler beim ausloggen:`, error);
+        }
+    };
+
+      const handlegetallscores = async () => {
+        try {
+        setScores([]);
+        const response = await fetch(`http://localhost:8000/user/scores`, {
+            method: "GET",
+            credentials: "include"
+        });
+
+        if (!response.ok) { 
+            const data = await response.json(); 
+            console.error(`Fehler beim abfragen`);
+            return; 
+        }
+
+        const data = await response.json();
+        setScores(data);
+
+        } catch (error) {
+        console.error(`Fehler beim ausloggen:`, error);
+        }
+    };
+
+    const handlegetallscoresquiz = async (quiz_id: string) => {
+        try {
+        setScores([]);
+        const response = await fetch(`http://localhost:8000/quiz/${quiz_id}/scores`, {
+            method: "GET",
+            credentials: "include"
+        });
+
+        if (!response.ok) { 
+            const data = await response.json(); 
+            console.error(`Fehler beim abfragen`);
+            return; 
+        }
+
+        const data = await response.json();
+        setScores(data);
 
         } catch (error) {
         console.error(`Fehler beim ausloggen:`, error);
@@ -95,19 +151,66 @@ export function Quiz(){
     };
     return (
         <>
+        {showquizscore && 
+            <div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nutzer Name</th>
+                    <th>Bester Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                {scores.map(s => (
+                  <tr>
+                    <td>{s.user_name}</td>
+                    <td>{s.score}%</td>
+                  </tr>
+                ))}
+                </tbody>
+              </table>
+              <button onClick={() => setshowquizscore(false)}>Zurück</button>
+            </div>
+            
+        }
         {showmyedit && 
             <div>
                 <EditQuiz editelement={editelement}></EditQuiz>
                 <button onClick={() => setshowmyedit(false)}>Zurück</button>
             </div>
         }
-        {!showmyedit && <div>
+        {startmyquiz && 
+            <div>
+                <StartQuiz editelement={startelement} is_public={is_public}></StartQuiz>
+                <button onClick={() => setstartmyquiz(false)}>Zurück zu Meine Quizze</button>
+            </div>
+        }
+        {!showmyedit && !startmyquiz && !showquizscore && <div>
             <div class="div-buttons">
-            <button onClick={() => { setshowmyquiz(false)}}>Quiz erstellen</button>
-            <button onClick={() => { handlegetall("quiz-get-all-private"); setshowmyquiz(true); setshowmyquizbutton(true);}}>Meine Quizze</button>
-            <button onClick={() => { handlegetall("quiz-get-all-public"); setshowmyquiz(true); setshowmyquizbutton(false);}}>Öffenliche Quizze</button>
+            <button onClick={() => { setshowmyscores(false); setshowmyquiz(false)}}>Quiz erstellen</button>
+            <button onClick={() => { setshowmyquizbutton(true); handlegetall("quiz-get-all-private"); setshowmyquiz(true); setshowmyquizbutton(true);}}>Meine Quizze</button>
+            <button onClick={() => { setshowmyquizbutton(false); handlegetall("quiz-get-all-public"); setshowmyquiz(true);}}>Öffenliche Quizze</button>
+            <button onClick={() => { handlegetallscores(); setshowmyscores(true); setshowmyquiz(false);}}>Meine Scores</button>
           </div>
-          {!showmyquiz &&
+          {!showmyquiz && showmyscores && <div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Quiz Name</th>
+                      <th>Bester Score</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                  {scores.map(s => (
+                    <tr>
+                      <td>{s.quiz_name}</td>
+                      <td>{s.score}%</td>
+                    </tr>
+                  ))}
+                  </tbody>
+                </table>
+            </div>}
+          {!showmyquiz && !showmyscores &&
           <div>
             <form>
               {showerroraddquiz && (
@@ -145,7 +248,6 @@ export function Quiz(){
                   </label>
                 </div>
               </div>
-
               <button type="button" class="myButton" onClick={(e) => {e.preventDefault(); handleaddquiz(q_name);}} disabled={ q_name.trim() === ""}>Absenden</button>
             </form>
           </div>}
@@ -163,7 +265,8 @@ export function Quiz(){
                   {qiuzzes.map(q => (
                     <tr>
                       <td>{q.name}</td>
-                      <button>start</button>
+                      <button onClick={() => {setstartelement(q); setstartmyquiz(true); setshowmyquiz(false); setis_public(!showmyquizbutton); setshowmyquizbutton(false);}}>{showmyquizbutton ? "test" : "start"}</button>
+                      {!showmyquizbutton && <button onClick={() => {handlegetallscoresquiz(q.id.toString()); setshowquizscore(true)}}>Scores</button>}
                       {showmyquizbutton &&
                       <td>
                         <button onClick={() => {seteditelement(q); setshowmyedit(true);}}>edit</button>
