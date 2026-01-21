@@ -1,7 +1,7 @@
 import './app.css'
 import { useState } from 'preact/hooks';
 import { Quiz } from './quiz';
-
+//filter url kommentieren
 
 export function App() {
   const [showsignup, setsignup] = useState(true);

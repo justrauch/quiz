@@ -32,8 +32,9 @@ class Quiz(Base):
      
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(50), nullable=False, unique=True)
-    creater = Column(Integer, nullable=False)
+    creator_id = Column(Integer, nullable=False)
     is_public = Column(Boolean, nullable=False)
+    time = Column(Integer, nullable=False)
 
 class Question(Base):
     __tablename__ = "question_table"
@@ -141,7 +142,8 @@ def get_all_public_quizzes(session_id: str | None = Cookie(default=None)):
                 "id": quiz.id,
                 "name": quiz.name,
                 "is_public": quiz.is_public,
-                "creater": quiz.creater
+                "creator_id": quiz.creator_id,
+                "time": quiz.time
             }
             for quiz in quizzes
         ]
@@ -161,20 +163,21 @@ def get_all_private_quizzes(session_id: str | None = Cookie(default=None)):
         if not user:
             raise HTTPException(status_code=404, detail="User nicht gefunden")
 
-        quizzes = session.query(Quiz).filter(Quiz.creater == user.id).all()
+        quizzes = session.query(Quiz).filter(Quiz.creator_id == user.id).all()
         return [
             {
                 "id": quiz.id,
                 "name": quiz.name,
                 "is_public": quiz.is_public,
-                "creater": quiz.creater
+                "creator_id": quiz.creator_id,
+                "time": quiz.time
             }
             for quiz in quizzes
         ]
 
 
 @app.post("/add-quiz")
-def add_quiz(session_id: str | None = Cookie(default=None), quiz_name: str = Form(...), is_public: str = Form(...)):
+def add_quiz(session_id: str | None = Cookie(default=None), quiz_name: str = Form(...), is_public: str = Form(...), time: str = Form(...)):
     if not session_id or session_id not in sessions:
         raise HTTPException(status_code=401, detail="Nicht eingeloggt")
 
@@ -184,7 +187,7 @@ def add_quiz(session_id: str | None = Cookie(default=None), quiz_name: str = For
         if not user:
             raise HTTPException(status_code=404, detail="User nicht gefunden")
 
-        new_quiz = Quiz(name=quiz_name, creater=user.id, is_public=(is_public == "true"))
+        new_quiz = Quiz(name=quiz_name, creator_id=user.id, is_public=(is_public == "true"), time=int(time))
         session.add(new_quiz)
         try:
             session.commit()
@@ -192,16 +195,16 @@ def add_quiz(session_id: str | None = Cookie(default=None), quiz_name: str = For
         except IntegrityError:
             session.rollback()
             raise HTTPException(status_code=409, detail="Quiz-Name schon vorhanden")
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
             session.rollback()
-            raise HTTPException(status_code=500, detail="SQL Fehler")
+            raise HTTPException(status_code=500, detail=f"SQL Fehler: {str(e)}")
         except Exception:
             session.rollback()
             raise HTTPException(status_code=500, detail="Unbekannter Fehler")
 
 
 @app.post("/edit-quiz")
-def edit_quiz(quiz_id: int = Form(...), quiz_name: str = Form(...), is_public: str = Form(...), session_id: str | None = Cookie(default=None)):
+def edit_quiz(quiz_id: int = Form(...), quiz_name: str = Form(...), is_public: str = Form(...), time: str = Form(...), session_id: str | None = Cookie(default=None)):
     if not session_id or session_id not in sessions:
         raise HTTPException(status_code=401, detail="Nicht eingeloggt")
 
@@ -212,11 +215,12 @@ def edit_quiz(quiz_id: int = Form(...), quiz_name: str = Form(...), is_public: s
 
         username = sessions[session_id]
         user = session.query(User).filter(User.name == username).first()
-        if quiz.creater != user.id:
+        if quiz.creator_id != user.id:
             raise HTTPException(status_code=403, detail="Nicht berechtigt, dieses Quiz zu bearbeiten")
 
         quiz.name = quiz_name
         quiz.is_public = is_public == "true"
+        quiz.time = int(time)
 
         try:
             session.commit()
@@ -288,7 +292,7 @@ def add_question(quiz_id: int = Form(...), question_text: str = Form(...), typ: 
         username = sessions[session_id]
         user = session.query(User).filter(User.name == username).first()
 
-        quiz = session.query(Quiz).filter(Quiz.id == quiz_id, Quiz.creater == user.id).first()
+        quiz = session.query(Quiz).filter(Quiz.id == quiz_id, Quiz.creator_id == user.id).first()
         if not quiz:
             raise HTTPException(status_code=403, detail="Kein Quiz vorhanden oder keine Berechtigung")
 
@@ -320,7 +324,7 @@ def edit_question(question_id: int = Form(...), question_text: str = Form(...), 
             raise HTTPException(status_code=404, detail="Question nicht gefunden")
 
         quiz = session.query(Quiz).filter(Quiz.id == question.quiz_id).first()
-        if quiz.creater != user.id:
+        if quiz.creator_id != user.id:
             raise HTTPException(status_code=403, detail="Keine Berechtigung")
 
         question.text = question_text
@@ -351,7 +355,7 @@ def delete_question(question_id: int = Form(...), session_id: str | None = Cooki
             raise HTTPException(status_code=404, detail="Nicht gefunden")
 
         quiz = session.query(Quiz).filter(Quiz.id == question.quiz_id).first()
-        if quiz.creater != user.id:
+        if quiz.creator_id != user.id:
             raise HTTPException(status_code=403, detail="Keine Berechtigung")
 
         session.delete(question)
@@ -407,7 +411,7 @@ def add_answer(question_id: int = Form(...), answer_text: str = Form(...), is_tr
             raise HTTPException(status_code=404, detail="Question nicht gefunden")
 
         quiz = session.query(Quiz).filter(Quiz.id == question.quiz_id).first()
-        if quiz.creater != user.id:
+        if quiz.creator_id != user.id:
             raise HTTPException(status_code=403, detail="Keine Berechtigung")
 
         anz = len(session.query(Answer).filter(Answer.question_id == question_id).all())
@@ -447,7 +451,7 @@ def edit_answer(answer_id: int = Form(...), answer_text: str = Form(...), is_tru
 
         question = session.query(Question).filter(Question.id == answer.question_id).first()
         quiz = session.query(Quiz).filter(Quiz.id == question.quiz_id).first()
-        if quiz.creater != user.id:
+        if quiz.creator_id != user.id:
             raise HTTPException(status_code=403, detail="Keine Berechtigung")
 
         answer.text = answer_text
@@ -478,7 +482,7 @@ def delete_answer(answer_id: int = Form(...), session_id: str | None = Cookie(de
 
         question = session.query(Question).filter(Question.id == answer.question_id).first()
         quiz = session.query(Quiz).filter(Quiz.id == question.quiz_id).first()
-        if quiz.creater != user.id:
+        if quiz.creator_id != user.id:
             raise HTTPException(status_code=403, detail="Keine Berechtigung")
 
         session.delete(answer)

@@ -19,18 +19,23 @@ interface EditQuizProps {
 } 
 
 export function Question({ editelement }: EditQuizProps) { 
+    const [q_name, setq_Name] = useState(editelement?.text);
+    const [q_typ, setq_typ] = useState(editelement?.typ);
     const [a_name, seta_Name] = useState("");
     const [answers, setanswers] = useState<Answer[]>([]);
-    const [selectedTrue, setselectedTrue] = useState("false");
+    const [selectedTrue, setselectedTrue] = useState(editelement?.typ == "Text Antwort" ? "true" : "false");
     const [showerroransw, seterroransw] = useState(false);
     const [errormessageansw, seterrormessageansw] = useState("");
     const [errorcolor, seterrorcolor] = useState("rot");
+    const [showerrorquest, seterrorquest] = useState(false);
+    const [errormessagequest, seterrormessagequest] = useState("");
+    const [errorcolorquest, seterrorcolorquest] = useState("rot");
 
     const handleaddanswer = async (question_id: string, answer_text: string, is_true: string) => {
       try {
         const formData = new FormData();
         formData.append("question_id", question_id);
-        formData.append("answer_text", answer_text);
+        formData.append("answer_text", editelement?.typ == "Wahr/Falsch" ? "Wahr" : answer_text);
         formData.append("is_true", is_true);
         formData.append("typ", editelement?.typ.toString() || "");
         const response = await fetch("http://localhost:8000/quiz/question/add-answer", {
@@ -39,6 +44,7 @@ export function Question({ editelement }: EditQuizProps) {
           credentials: "include"
         })
 
+        seterroransw(true);
 
         if (!response.ok) { 
             const data = await response.json(); 
@@ -103,6 +109,37 @@ export function Question({ editelement }: EditQuizProps) {
         }
     };
 
+    const handleeditquestion = async (quiz_id : string, question_text: string, questions_type: string) => {
+      try {
+        const formData = new FormData();
+        formData.append("question_id", editelement?.id.toString() || "");
+        formData.append("question_text", question_text);
+        formData.append("typ", questions_type);
+        const response = await fetch("http://localhost:8000/quiz/edit-question", {
+          method: "POST",
+          body: formData,
+          credentials: "include"
+        })
+
+        seterrorquest(true);
+
+        if (!response.ok) { 
+            const data = await response.json(); 
+            seterrorcolorquest("red")
+            seterrormessagequest(response.status === 409 || response.status === 401 ? data.detail : "Server Error versuchen sie es erneut");
+            console.error(data.detail);
+            return; 
+        }
+
+        seterrorcolorquest("green");
+        seterrormessagequest("Änderung wurde vorgenommen")
+        const data = await response.json();
+
+      } catch (error) {
+        console.error(`Fehler beim ausloggen:`, error);
+      }
+    };
+
     useEffect(() => {
         if (editelement?.id) {
             handlegetallanswers(editelement.id.toString());
@@ -111,6 +148,16 @@ export function Question({ editelement }: EditQuizProps) {
 
     return ( 
         <div> 
+            <div>
+                <button class = "myButton" onClick={() => {handleeditquestion(editelement?.id.toString() || "",q_name || "",q_typ || "")}} disabled = {q_name === ""}>#</button>
+            </div>
+            <h3 style="text-align: center;">{editelement?.typ}</h3>
+            {showerrorquest && (
+                    <span style={{ color: errorcolorquest || "red" }}>
+                    {errormessagequest}
+                    </span>
+            )}
+            <input class = "input-full" type="text" id="name" name="name" maxlength={50} defaultValue = {q_name} onInput={(e) => setq_Name((e.target as HTMLInputElement).value || "")}></input>
             {answers.map(a => (
                 <div class = "form-row box">
                     <p>{a.text} ({a.is_true ? "Wahr" : "Falsch"})</p>
@@ -124,14 +171,14 @@ export function Question({ editelement }: EditQuizProps) {
                     {errormessageansw}
                     </span>
                 )}
-                <div class="form-row">
+                {editelement?.typ != "Wahr/Falsch" && <div class="form-row">
                     <label htmlFor="name">Antwort:</label>
                     <input type="text" id="name" name="name" maxlength={50} onInput={(e) => seta_Name((e.target as HTMLInputElement).value || "")}></input>
-                </div>
+                </div>}
                     <div class="form-row">
                     <label htmlFor="name">Richtigkeit:</label>
                     <div>
-                    <label>
+                    {editelement?.typ != "Text Antwort" && <label>
                         <input 
                         type="radio" 
                         name={`public-${editelement?.id}`} 
@@ -140,7 +187,7 @@ export function Question({ editelement }: EditQuizProps) {
                         onChange={(e) => setselectedTrue((e.target as HTMLInputElement).value || "")}
                         /> 
                         Falsch
-                    </label>
+                    </label>}
 
                     <label>
                         <input 
@@ -150,11 +197,11 @@ export function Question({ editelement }: EditQuizProps) {
                         checked={selectedTrue === "true"} 
                         onChange={(e) => setselectedTrue((e.target as HTMLInputElement).value || "")}
                         /> 
-                        Richtig
+                        Wahr
                     </label>
                     </div>
                 </div>
-                <button style="  display: block; margin-left: auto;" onClick={() => {handleaddanswer(editelement?.id.toString() || "", a_name, selectedTrue)}} disabled={ a_name.trim() === ""}>hinzufügen</button>
+                <button style="  display: block; margin-left: auto;" onClick={() => {handleaddanswer(editelement?.id.toString() || "", a_name, selectedTrue)}} disabled={ editelement?.typ != "Wahr/Falsch" && a_name.trim() === ""}>hinzufügen</button>
             </div>
         </div> 
     ); 

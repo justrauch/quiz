@@ -7,6 +7,7 @@ interface Quiz {
     name: string; 
     is_public: boolean; 
     creater: number; 
+    time: number;
 } 
 
 interface Question { 
@@ -22,6 +23,7 @@ interface EditQuizProps {
 export function EditQuiz({ editelement }: EditQuizProps) { 
 
     const [q_name, setq_Name] = useState(editelement?.name || "");
+    const [q_time, setq_time] = useState(editelement?.time ? (editelement.time >= 0 ? editelement.time : undefined) : undefined);
     const [quest_name, setquest_Name] = useState(editelement?.name || "");
     const [selectedPublic, setSelectedPublic] = useState(editelement?.is_public ? "true" : "false");
     const [showerror, seterroraddquiz] = useState(false);
@@ -39,6 +41,7 @@ export function EditQuiz({ editelement }: EditQuizProps) {
         formData.append("quiz_id", editelement?.id.toString() || "");
         formData.append("quiz_name", q_name);
         formData.append("is_public", selectedPublic);
+        formData.append("time", (q_time ? (q_time * 60 - (q_time * 60) % 1).toString() : "-1"));
         const response = await fetch(`http://localhost:8000/edit-quiz`, {
             method: "POST",
             body: formData,
@@ -138,36 +141,11 @@ export function EditQuiz({ editelement }: EditQuizProps) {
         }
     };
 
-    const handleeditquestion = async (quiz_id : string, question_text: string, questions_type: string) => {
-      try {
-        const formData = new FormData();
-        formData.append("quiz_id", editelement?.id.toString() || "");
-        formData.append("question_text", question_text);
-        formData.append("typ", questions_type);
-        const response = await fetch("http://localhost:8000/quiz/edit-question", {
-          method: "POST",
-          body: formData,
-          credentials: "include"
-        })
-
-
-        if (!response.ok) { 
-            const data = await response.json(); 
-            console.error(data.detail);
-            return; 
-        }
-        const data = await response.json();
-
-      } catch (error) {
-        console.error(`Fehler beim ausloggen:`, error);
-      }
-    };
-
     return (
         <div> 
             <div class="div-buttons">
               <button onClick={() => { seterroraddquiz(false); setshowquestions(false); }}>Quiz</button>
-              <button onClick={() => { seterroraddquest(false); handlegetallquestions(editelement?.id.toString() || ""); setshowquestions(true); }}>Questions</button>
+              <button onClick={() => { handlegetallquestions(editelement?.id.toString() || ""); seterroraddquest(false); setshowquestions(true); }}>Questions</button>
             </div>
             {showquestions && 
               <div> 
@@ -204,8 +182,6 @@ export function EditQuiz({ editelement }: EditQuizProps) {
                             <div class = "form-row">
                               <button class = "myButton" onClick={() => {handledeletequestion(q.id.toString())}}>X</button>
                             </div>
-                            <h3 style="text-align: center;">{q.typ}</h3>
-                            <p>{q.text}</p>
                             <Question editelement={q}></Question>
                           </div>
                         </td>
@@ -224,8 +200,12 @@ export function EditQuiz({ editelement }: EditQuizProps) {
               )}
               <div class="form-row">
                 <label htmlFor="name">Name:</label>
-                <input type="text" id="name" name="name" maxlength={50} defaultValue = {editelement?.name} onInput={(e) => setq_Name((e.target as HTMLInputElement).value || "")}></input>
+                <input type="text" id="name" name="name" maxlength={50} defaultValue = {q_name} onInput={(e) => setq_Name((e.target as HTMLInputElement).value || "")}></input>
               </div>
+                <div class="form-row">
+                  <label htmlFor="name">Maximal Zeit in s {"(leer lassen für kein Limit)"}:</label>
+                  <input type="number" id="time" step="0.1" name="time" defaultValue={q_time} onInput={(e) => {const value = (e.target as HTMLInputElement).value; setq_time(value === "" ? -1 : Number(value));}}/>
+                </div>
               <div class="form-row">
                 <label htmlFor="name">Sichbarkeit:</label>
                 <div>

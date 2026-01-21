@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Boolean, text
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 import pymysql
 
@@ -39,6 +39,7 @@ class Quiz(Base):
     name = Column(String(50), unique=True, nullable=False)
     creator_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     is_public = Column(Boolean, nullable=False)
+    time = Column(Integer, nullable=False)
 
     creator = relationship("User", back_populates="quizzes")
     questions = relationship("Question", back_populates="quiz", cascade="all, delete-orphan")
@@ -77,5 +78,14 @@ class Score(Base):
 
     user_score = relationship("User", back_populates="user_scores")
     uquiz_score = relationship("Quiz", back_populates="quiz_scores")
+
+with engine.connect() as conn:
+    conn.execute(text("SET FOREIGN_KEY_CHECKS=0"))
+    conn.execute(text("DROP TABLE IF EXISTS score_table"))
+    conn.execute(text("DROP TABLE IF EXISTS answer_table"))
+    conn.execute(text("DROP TABLE IF EXISTS question_table"))
+    conn.execute(text("DROP TABLE IF EXISTS quiz_table"))
+    conn.execute(text("SET FOREIGN_KEY_CHECKS=1"))
+    conn.commit()
 
 Base.metadata.create_all(bind=engine)

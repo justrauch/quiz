@@ -2,6 +2,20 @@ import { useState } from 'preact/hooks';
 import { EditQuiz } from './editquiz';
 import { StartQuiz } from './startquiz';
 
+interface Score {
+  user_name: string;
+  quiz_name: string;
+  score: number;
+}
+
+interface Quiz {
+  id: number;
+  name: string;
+  is_public: boolean;
+  creater: number;
+  time: number;
+}
+
 export function Quiz(){
 
       const [showmyquiz, setshowmyquiz] = useState(false);
@@ -13,23 +27,11 @@ export function Quiz(){
       const [is_public, setis_public] = useState(false);
       const [showmyquizbutton, setshowmyquizbutton] = useState(true);
       const [q_name, setq_Name] = useState("");
+      const [q_time, setq_time] = useState(-1);
       const [selectedPublic, setSelectedPublic] = useState("false");
       const [showerroraddquiz, seterroraddquiz] = useState(false)
       const [errormessageaddquiz, seterrormessageaddquiz] = useState("");
-
-      interface Score {
-        user_name: string;
-        quiz_name: string;
-        score: number;
-      }
       const [scores, setScores] = useState<Score[]>([]);
-
-      interface Quiz {
-        id: number;
-        name: string;
-        is_public: boolean;
-        creater: number;
-      }
       const [qiuzzes, setqiuzzes] = useState<Quiz[]>([]);
       const [editelement, seteditelement] = useState<Quiz | undefined>(undefined);
 
@@ -98,12 +100,13 @@ export function Quiz(){
         }
     };
 
-    const handleaddquiz = async (name: string) => {
+    const handleaddquiz = async (name: string, time: number) => {
         try {
         seterroraddquiz(false);
         const formData = new FormData();
         formData.append("quiz_name", name);
         formData.append("is_public", selectedPublic);
+        formData.append("time", (time * 60 - (time * 60) % 1).toString());
         const response = await fetch(`http://localhost:8000/add-quiz`, {
             method: "POST",
             body: formData,
@@ -176,7 +179,7 @@ export function Quiz(){
         {showmyedit && 
             <div>
                 <EditQuiz editelement={editelement}></EditQuiz>
-                <button onClick={() => setshowmyedit(false)}>Zurück</button>
+                <button onClick={() => {handlegetall("quiz-get-all-private"); setshowmyedit(false)}}>Zurück</button>
             </div>
         }
         {startmyquiz && 
@@ -223,6 +226,10 @@ export function Quiz(){
                 <input type="text" id="name" name="name" maxlength={50} onInput={(e) => setq_Name((e.target as HTMLInputElement).value || "")}/>
               </div>
               <div class="form-row">
+                <label htmlFor="name">Maximal Zeit in min {"(leer lassen für kein Limit)"}:</label>
+                <input type="number" id="time" name="time" onInput={(e) => {const value = (e.target as HTMLInputElement).value; setq_time(value === "" ? -1 : Number(value));}}/>
+              </div>
+              <div class="form-row">
                 <label htmlFor="name">Sichbarkeit:</label>
                 <div>
                   <label>
@@ -248,7 +255,7 @@ export function Quiz(){
                   </label>
                 </div>
               </div>
-              <button type="button" class="myButton" onClick={(e) => {e.preventDefault(); handleaddquiz(q_name);}} disabled={ q_name.trim() === ""}>Absenden</button>
+              <button type="button" class="myButton" onClick={(e) => {e.preventDefault(); handleaddquiz(q_name, q_time);}} disabled={ q_name.trim() === ""}>Absenden</button>
             </form>
           </div>}
           {showmyquiz &&

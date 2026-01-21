@@ -6,6 +6,7 @@ interface Quiz {
     name: string; 
     is_public: boolean; 
     creater: number; 
+    time: number;
 } 
 
 interface Question { 
@@ -32,11 +33,34 @@ export function StartQuiz({ editelement, is_public}: EditQuizProps) {
     const [end, setend] = useState(false);
     const [notanswerd, setnotanswerd] = useState(true);
     const [at, setat] = useState(0);
+    const [time, settime] = useState(editelement?.time || -1);
+    const [stime, setstime] = useState("--:--");
+    const [countdownstarted, setcountdownstarted] = useState(false);
     const [score, setscore] = useState(0);
     const [is_correct, setis_correct] = useState(false);
     const [showcorrect, setshowcorrect] = useState(false);
     const [questions, setquestions] = useState<Question[]>([]);
     const [answers, setanswers] = useState<Answer[]>([]);
+
+    useEffect(() => {
+        if (time < 0 || !countdownstarted) return;
+
+        if (time == 0) {
+            handleaddscore(
+                editelement?.id.toString() || "",
+                (questions.length > 0 ? (score / questions.length) * 100 : 0).toString()
+            );
+            setend(true);
+            return;
+        }
+
+        const interval = setInterval(() => {
+            settime(t => t - 1);
+            setstime(((time/60 - ((time/60) % 1))).toString() + ":" + (time % 60 < 10 ? "0" + (time % 60).toString() : (time % 60).toString()));
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [countdownstarted, time]);
 
     const handlegetallanswers = async (question_id: string) => {
         try {
@@ -100,6 +124,7 @@ export function StartQuiz({ editelement, is_public}: EditQuizProps) {
         }
 
         const data = await response.json();
+        setcountdownstarted(false);
 
         } catch (error) {
         console.error(`Fehler beim ausloggen:`, error);
@@ -127,18 +152,20 @@ export function StartQuiz({ editelement, is_public}: EditQuizProps) {
                     <ul style={{marginLeft: 2}}>
                         <li>Wenn man geantwortet hat kann man nicht mehr korrigieren!!!</li>
                         <li>Wenn man auf weiter oder Resultat senden klickt kann man nicht mehr zurück!!!</li>
+                        {((time) >= 0) && <li>Zum beantworten der Fragen haben sie nur <b>{((time/60 - ((time/60) % 1))).toString() + ":" + (time % 60 < 10 ? "0" + (time % 60).toString() : (time % 60).toString())}</b> min Zeit!!!</li>}
                     </ul>
                     Willst du das Quiz <b>{editelement?.name}</b> starten?
                 </p> 
-                <button onClick={() => setstart(true)}>Start</button>
+                <button onClick={() => {setstart(true); setcountdownstarted(true);}}>Start</button>
             </div>} 
             {end && <div>
                 <p>
                     Resultat <b>{questions.length > 0 ? (score / questions.length) * 100 : 0}%</b> wurde gesendet!!!
                 </p>
             </div>}
-            {start && !end && 
+            {start && !end && <div>
                 <div class = "box">
+                    <p style="text-align: right">{stime}</p>
                     <h3 style="text-align: center;">{questions.at(at)?.typ}</h3>
                     <p>{questions.at(at)?.text}</p>
                     {answers.map(a => (
@@ -158,6 +185,7 @@ export function StartQuiz({ editelement, is_public}: EditQuizProps) {
                     {questions.length - 1 <= at && <button onClick={() => {handleaddscore(editelement?.id.toString() || "", (questions.length > 0 ? (score / questions.length) * 100 : 0).toString()); setend(true)}}>Resultat senden</button>}
                     {questions.length - 1 > at &&<button onClick={() => {setat(at + 1); setnotanswerd(true); setshowcorrect(false);}}>Weiter</button>}
                 </div>
+            </div>
             } 
         </div>
     ); 
