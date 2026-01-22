@@ -548,7 +548,7 @@ def add_score(quiz_id: str = Form(...), score: str = Form(...), session_id: str 
         if not user or not quiz:
             raise HTTPException(status_code=404, detail="User oder Quiz nicht gefunden")
 
-        existing_score = session.query(Score).filter(Score.user_id == user_id).first()
+        existing_score = session.query(Score).filter(Score.user_id == user_id, Score.quiz_id == quiz_id).first()
         if existing_score:
             existing_score.score = score
         else:

@@ -203,8 +203,8 @@ export function EditQuiz({ editelement }: EditQuizProps) {
                 <input type="text" id="name" name="name" maxlength={50} defaultValue = {q_name} onInput={(e) => setq_Name((e.target as HTMLInputElement).value || "")}></input>
               </div>
                 <div class="form-row">
-                  <label htmlFor="name">Maximal Zeit in s {"(leer lassen für kein Limit)"}:</label>
-                  <input type="number" id="time" step="0.1" name="time" defaultValue={q_time} onInput={(e) => {const value = (e.target as HTMLInputElement).value; setq_time(value === "" ? -1 : Number(value));}}/>
+                  <label htmlFor="name">Maximal Zeit in min {"(leer lassen für kein Limit)"}:</label>
+                  <input type="number" id="time" step="0.1" name="time" defaultValue={q_time ? q_time/60 : ""} onInput={(e) => {const value = (e.target as HTMLInputElement).value; setq_time(value === "" ? -1 : Number(value));}}/>
                 </div>
               <div class="form-row">
                 <label htmlFor="name">Sichbarkeit:</label>

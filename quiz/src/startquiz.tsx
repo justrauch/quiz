@@ -35,12 +35,14 @@ export function StartQuiz({ editelement, is_public}: EditQuizProps) {
     const [at, setat] = useState(0);
     const [time, settime] = useState(editelement?.time || -1);
     const [stime, setstime] = useState("--:--");
+    const [tainput, settainput] = useState("");
     const [countdownstarted, setcountdownstarted] = useState(false);
     const [score, setscore] = useState(0);
     const [is_correct, setis_correct] = useState(false);
     const [showcorrect, setshowcorrect] = useState(false);
     const [questions, setquestions] = useState<Question[]>([]);
     const [answers, setanswers] = useState<Answer[]>([]);
+    const [modalIsOpen, setModalIsOpen] = useState(false);
 
     useEffect(() => {
         if (time < 0 || !countdownstarted) return;
@@ -160,7 +162,7 @@ export function StartQuiz({ editelement, is_public}: EditQuizProps) {
             </div>} 
             {end && <div>
                 <p>
-                    Resultat <b>{questions.length > 0 ? (score / questions.length) * 100 : 0}%</b> wurde gesendet!!!
+                    Resultat <b>{questions.length > 0 ? Math.round(((score / questions.length) * 100) * 100) / 100 : 0}%</b> wurde gesendet!!!
                 </p>
             </div>}
             {start && !end && <div>
@@ -168,11 +170,18 @@ export function StartQuiz({ editelement, is_public}: EditQuizProps) {
                     <p style="text-align: right">{stime}</p>
                     <h3 style="text-align: center;">{questions.at(at)?.typ}</h3>
                     <p>{questions.at(at)?.text}</p>
-                    {answers.map(a => (
+                    {questions.at(at)?.typ != "Text Antwort" && <div> {answers.map(a => (
                         <div class = "form-row box">
                             <button onClick={() => {setscore(score + (notanswerd && a.is_true ? 1 : 0)); setnotanswerd(false); setis_correct(a.is_true); setshowcorrect(true);}}>{a.text}</button>
                         </div>
-                    ))}
+                    ))}</div>}
+                    {questions.at(at)?.typ == "Text Antwort" && <div> 
+                        <div class="form-row">
+                            <label htmlFor="name">Antwort:</label>
+                            <input type="text" id="name" name="name" maxlength={50} onInput={(e) => settainput((e.target as HTMLInputElement).value || "")}></input>
+                        </div>
+                        <button onClick={() => {setscore(score + (notanswerd && answers.length == 1 && answers.at(0)?.text === tainput ? 1 : 0)); setnotanswerd(false); setis_correct(answers.at(0)?.text === tainput); setshowcorrect(true);}}>Lösen</button>
+                    </div>}
                     {showcorrect && <div>
                         {is_correct && (<span style={{ color: "green" }}>
                                 Frage richig beantwortet
@@ -182,7 +191,7 @@ export function StartQuiz({ editelement, is_public}: EditQuizProps) {
                             </span>)}
                     </div>
                     }
-                    {questions.length - 1 <= at && <button onClick={() => {handleaddscore(editelement?.id.toString() || "", (questions.length > 0 ? (score / questions.length) * 100 : 0).toString()); setend(true)}}>Resultat senden</button>}
+                    {questions.length - 1 <= at && <button onClick={() => {handleaddscore(editelement?.id.toString() || "", (questions.length > 0 ? Math.round(((score / questions.length) * 100) * 100) / 100 : 0).toString()); setend(true)}}>Resultat senden</button>}
                     {questions.length - 1 > at &&<button onClick={() => {setat(at + 1); setnotanswerd(true); setshowcorrect(false);}}>Weiter</button>}
                 </div>
             </div>

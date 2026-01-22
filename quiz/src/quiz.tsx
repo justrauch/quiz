@@ -1,6 +1,7 @@
-import { useState } from 'preact/hooks';
+import { useState,useEffect } from 'preact/hooks';
 import { EditQuiz } from './editquiz';
 import { StartQuiz } from './startquiz';
+import { route } from 'preact-router';
 
 interface Score {
   user_name: string;
@@ -16,7 +17,7 @@ interface Quiz {
   time: number;
 }
 
-export function Quiz(){
+export function Quiz(props: any){
 
       const [showmyquiz, setshowmyquiz] = useState(false);
       const [showquizscore, setshowquizscore] = useState(false);
@@ -34,6 +35,9 @@ export function Quiz(){
       const [scores, setScores] = useState<Score[]>([]);
       const [qiuzzes, setqiuzzes] = useState<Quiz[]>([]);
       const [editelement, seteditelement] = useState<Quiz | undefined>(undefined);
+      const [filter, setfilter] = useState("");
+      const [filteredScores, setfilteredScores] = useState<Score[]>([]);
+      const [filterdqiuzzes, setfilterdqiuzzes] = useState<Quiz[]>([]);
 
       const handlegetall = async (methode: string) => {
         try {
@@ -49,6 +53,7 @@ export function Quiz(){
         }
 
         const data = await response.json();
+        setfilterdqiuzzes(data);
         setqiuzzes(data);
 
         } catch (error) {
@@ -71,6 +76,7 @@ export function Quiz(){
         }
 
         const data = await response.json();
+        setfilteredScores(data);
         setScores(data);
 
         } catch (error) {
@@ -94,6 +100,7 @@ export function Quiz(){
 
         const data = await response.json();
         setScores(data);
+        setfilteredScores(data);
 
         } catch (error) {
         console.error(`Fehler beim ausloggen:`, error);
@@ -152,10 +159,48 @@ export function Quiz(){
         console.error(`Fehler beim ausloggen:`, error);
         }
     };
+
+    
+    const handlelogout = async () => {
+      try {
+        const response = await fetch(`http://localhost:8000/log-out`, {
+          method: "POST",
+          credentials: "include"
+        });
+
+        if (!response.ok) { 
+          const data = await response.json(); 
+          console.error(`Fehler beim ausloggen`);
+          return; 
+        }
+
+        const data = await response.json();
+        route("/");
+
+      } catch (error) {
+        console.error(`Fehler beim ausloggen:`, error);
+      }
+    };
+
     return (
         <>
+        <button class="myButton" style={{marginBottom: 5}} onClick={handlelogout}>Abmelden</button>
         {showquizscore && 
             <div>
+              <div class="form-row">
+                <label htmlFor="name">Filter:</label>
+                <input
+                  type="text"
+                  value={filter}
+                  onInput={e =>
+                    setfilter((e.target as HTMLInputElement).value)
+                  }
+                />
+                <button onClick={() => {setfilteredScores(scores.filter(s =>
+                  s.user_name.toLowerCase().includes(filter.toLowerCase()) ||
+                  (s.score.toString() + "%").includes(filter)
+                ))}}>filtern</button>
+              </div>
               <table>
                 <thead>
                   <tr>
@@ -164,7 +209,7 @@ export function Quiz(){
                   </tr>
                 </thead>
                 <tbody>
-                {scores.map(s => (
+                {filteredScores.map(s => (
                   <tr>
                     <td>{s.user_name}</td>
                     <td>{s.score}%</td>
@@ -174,7 +219,6 @@ export function Quiz(){
               </table>
               <button onClick={() => setshowquizscore(false)}>Zurück</button>
             </div>
-            
         }
         {showmyedit && 
             <div>
@@ -185,17 +229,31 @@ export function Quiz(){
         {startmyquiz && 
             <div>
                 <StartQuiz editelement={startelement} is_public={is_public}></StartQuiz>
-                <button onClick={() => setstartmyquiz(false)}>Zurück zu Meine Quizze</button>
+                <button onClick={() => {setstartmyquiz(false); setshowmyscores(false); setshowmyquiz(true); setshowmyquizbutton(!is_public);}}>Zurück zu Meine Quizze</button>
             </div>
         }
         {!showmyedit && !startmyquiz && !showquizscore && <div>
             <div class="div-buttons">
             <button onClick={() => { setshowmyscores(false); setshowmyquiz(false)}}>Quiz erstellen</button>
-            <button onClick={() => { setshowmyquizbutton(true); handlegetall("quiz-get-all-private"); setshowmyquiz(true); setshowmyquizbutton(true);}}>Meine Quizze</button>
-            <button onClick={() => { setshowmyquizbutton(false); handlegetall("quiz-get-all-public"); setshowmyquiz(true);}}>Öffenliche Quizze</button>
+            <button onClick={() => { setshowmyscores(false); setshowmyquizbutton(true); handlegetall("quiz-get-all-private"); setshowmyquiz(true);}}>Meine Quizze</button>
+            <button onClick={() => { setshowmyscores(false); setshowmyquizbutton(false); handlegetall("quiz-get-all-public"); setshowmyquiz(true);}}>Öffenliche Quizze</button>
             <button onClick={() => { handlegetallscores(); setshowmyscores(true); setshowmyquiz(false);}}>Meine Scores</button>
           </div>
           {!showmyquiz && showmyscores && <div>
+              <div class="form-row">
+                <label htmlFor="name">Filter:</label>
+                <input
+                  type="text"
+                  value={filter}
+                  onInput={e =>
+                    setfilter((e.target as HTMLInputElement).value)
+                  }
+                />
+               <button onClick={() => {setfilteredScores(scores.filter(s =>
+                  s.quiz_name.toLowerCase().includes(filter.toLowerCase()) ||
+                  (s.score.toString() + "%").includes(filter)
+                ))}}>filtern</button>
+              </div>
                 <table>
                   <thead>
                     <tr>
@@ -204,7 +262,7 @@ export function Quiz(){
                     </tr>
                   </thead>
                   <tbody>
-                  {scores.map(s => (
+                  {filteredScores.map(s => (
                     <tr>
                       <td>{s.quiz_name}</td>
                       <td>{s.score}%</td>
@@ -261,6 +319,18 @@ export function Quiz(){
           {showmyquiz &&
               <div >
                 {!showmyquizbutton && <button onClick={() => handlegetall("quiz-get-all-public")}>Neuladen</button>}
+                <div class="form-row">
+                <label htmlFor="name">Filter:</label>
+                <input
+                  type="text"
+                  value={filter}
+                  onInput={e =>
+                    setfilter((e.target as HTMLInputElement).value)
+                  }
+                />
+                <button onClick={() => {setfilterdqiuzzes(qiuzzes.filter(q =>
+                  q.name.toLowerCase().includes(filter.toLowerCase())))}}>filtern</button>
+              </div>
                 <table>
                   <thead>
                     <tr>
@@ -269,7 +339,7 @@ export function Quiz(){
                     </tr>
                   </thead>
                   <tbody>
-                  {qiuzzes.map(q => (
+                  {filterdqiuzzes.map(q => (
                     <tr>
                       <td>{q.name}</td>
                       <button onClick={() => {setstartelement(q); setstartmyquiz(true); setshowmyquiz(false); setis_public(!showmyquizbutton); setshowmyquizbutton(false);}}>{showmyquizbutton ? "test" : "start"}</button>
