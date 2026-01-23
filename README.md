@@ -4,4 +4,4 @@ start Docker Desktop App or Demon in Console <br>
 start docker in /server with docker-compose up --build <br>
 start react in /quiz with npm run dev <br>
 
-req: npm install preact-router <br>
+req: npm install preact-router, pip install fastapi pytest httpx, pip install fastapi[all] sqlalchemy passlib<br>

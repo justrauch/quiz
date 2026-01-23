@@ -126,6 +126,25 @@ def logout(response: Response, session_id: str | None = Cookie(default=None)):
     response.delete_cookie("session_id")
     return {"message": "Logout erfolgreich"}
 
+# Just for testing
+@app.post("/delete-user")
+def delete_user(name: str = Form(...)):
+    with Session(engine) as session:
+        user = session.query(User).filter(User.name == name).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Nicht gefunden")
+
+        session.delete(user)
+        try:
+            session.commit()
+            return {"message": "User gelöscht"}
+        except SQLAlchemyError:
+            session.rollback()
+            raise HTTPException(status_code=500, detail="SQL Fehler")
+        except Exception:
+            session.rollback()
+            raise HTTPException(status_code=500, detail="Unbekannter Fehler")
+
 
 @app.get("/quiz-get-all-public")
 def get_all_public_quizzes(session_id: str | None = Cookie(default=None)):

@@ -22,180 +22,232 @@ interface Answer {
     is_true: boolean; 
 }
 
-interface EditQuizProps { 
+interface StartQuizProps { 
     editelement: Quiz | undefined; 
     is_public: boolean;
 } 
 
-export function StartQuiz({ editelement, is_public}: EditQuizProps) { 
+export function StartQuiz({ editelement, is_public}: StartQuizProps) { 
 
-    const [start, setstart] = useState(false);
-    const [end, setend] = useState(false);
-    const [notanswerd, setnotanswerd] = useState(true);
-    const [at, setat] = useState(0);
-    const [time, settime] = useState(editelement?.time || -1);
-    const [stime, setstime] = useState("--:--");
-    const [tainput, settainput] = useState("");
-    const [countdownstarted, setcountdownstarted] = useState(false);
-    const [score, setscore] = useState(0);
-    const [is_correct, setis_correct] = useState(false);
-    const [showcorrect, setshowcorrect] = useState(false);
-    const [questions, setquestions] = useState<Question[]>([]);
-    const [answers, setanswers] = useState<Answer[]>([]);
-    const [modalIsOpen, setModalIsOpen] = useState(false);
+/* ---------------- Quiz-Status ---------------- */
+const [quizStarted, setQuizStarted] = useState(false);
+const [quizEnded, setQuizEnded] = useState(false);
+const [score, setScore] = useState(0);
+const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+const [questionNotAnswered, setQuestionNotAnswered] = useState(true);
+const [isAnswerCorrect, setIsAnswerCorrect] = useState(false);
+const [showAnswerFeedback, setShowAnswerFeedback] = useState(false);
 
-    useEffect(() => {
-        if (time < 0 || !countdownstarted) return;
+/* ---------------- Timer / Zeit ---------------- */
+const [remainingTime, setRemainingTime] = useState(editelement?.time || -1);
+const [formattedTime, setFormattedTime] = useState("--:--");
+const [countdownStarted, setCountdownStarted] = useState(false);
 
-        if (time == 0) {
-            handleaddscore(
-                editelement?.id.toString() || "",
-                (questions.length > 0 ? (score / questions.length) * 100 : 0).toString()
-            );
-            setend(true);
-            return;
-        }
+/* ---------------- Fragen & Antworten ---------------- */
+const [questions, setQuestions] = useState<Question[]>([]);
+const [answers, setAnswers] = useState<Answer[]>([]);
+const [textAnswerInput, setTextAnswerInput] = useState("");
 
-        const interval = setInterval(() => {
-            settime(t => t - 1);
-            setstime(((time/60 - ((time/60) % 1))).toString() + ":" + (time % 60 < 10 ? "0" + (time % 60).toString() : (time % 60).toString()));
-        }, 1000);
 
-        return () => clearInterval(interval);
-    }, [countdownstarted, time]);
+  /* ---------------- Countdown ---------------- */
+  useEffect(() => {
+    if (remainingTime < 0 || !countdownStarted) return;
 
-    const handlegetallanswers = async (question_id: string) => {
-        try {
-        const response = await fetch(`http://localhost:8000/quiz/question/${question_id}/answers`, {
-            method: "GET",
-            credentials: "include"
-        });
+    // Zeit abgelaufen
+    if (remainingTime === 0) {
+      handleAddScore(
+        editelement?.id.toString() || "",
+        (questions.length > 0 ? (score / questions.length) * 100 : 0).toString()
+      );
+      setQuizEnded(true);
+      return;
+    }
 
-        if (!response.ok) { 
-            const data = await response.json(); 
-            console.error(data.detail);
-            return; 
-        }
+    const interval = setInterval(() => {
+      setRemainingTime(t => t - 1);
+      setFormattedTime(
+        `${Math.floor(remainingTime / 60)}:${remainingTime % 60 < 10 ? "0" + (remainingTime % 60).toString() : remainingTime % 60}`
+      );
+    }, 1000);
 
-        const data = await response.json();
-        setanswers(data);
+    return () => clearInterval(interval);
+  }, [countdownStarted, remainingTime]);
 
-        } catch (error) {
-        console.error(`Fehler beim ausloggen:`, error);
-        }
-    };
+  /* ---------------- Daten vom Backend ---------------- */
+  // Antworten einer Frage abrufen
+  const fetchAnswersForQuestion = async (questionId: string) => {
+    try {
+      const response = await fetch(`http://localhost:8000/quiz/question/${questionId}/answers`, {
+        method: "GET",
+        credentials: "include"
+      });
 
-    const handlegetallquestions = async (quiz_id: string) => {
-        try {
-        const response = await fetch(`http://localhost:8000/quiz/${quiz_id}/questions`, {
-            method: "GET",
-            credentials: "include"
-        });
+      if (!response.ok) { 
+        const data = await response.json(); 
+        console.error(data.detail);
+        return; 
+      }
 
-        if (!response.ok) { 
-            const data = await response.json(); 
-            console.error(data.detail);
-            return; 
-        }
-        const data = await response.json();
-        setquestions(data);
+      const data = await response.json();
+      setAnswers(data);
 
-        } catch (error) {
-        console.error(`Fehler beim ausloggen:`, error);
-        }
-    };
+    } catch (error) {
+      console.error(`Fehler beim Abrufen der Antworten:`, error);
+    }
+  };
 
-    const handleaddscore = async (quiz_id: string, score: string) => {
-        try {
-        if(!is_public){
-            return;
-        }
-        const formData = new FormData();
-        formData.append("quiz_id", quiz_id);
-        formData.append("score", score);
-        const response = await fetch(`http://localhost:8000/user/quiz/score/add-score`, {
-            method: "POST",
-            body: formData,
-            credentials: "include"
-        });
+  // Fragen des Quiz abrufen
+  const fetchQuestionsForQuiz = async (quizId: string) => {
+    try {
+      const response = await fetch(`http://localhost:8000/quiz/${quizId}/questions`, {
+        method: "GET",
+        credentials: "include"
+      });
 
-        if (!response.ok) { 
-            const data = await response.json(); 
-            console.error(data.detail);
-            return; 
-        }
+      if (!response.ok) { 
+        const data = await response.json(); 
+        console.error(data.detail);
+        return; 
+      }
 
-        const data = await response.json();
-        setcountdownstarted(false);
+      const data = await response.json();
+      setQuestions(data);
 
-        } catch (error) {
-        console.error(`Fehler beim ausloggen:`, error);
-        }
-    };
+    } catch (error) {
+      console.error(`Fehler beim Abrufen der Fragen:`, error);
+    }
+  };
 
-    useEffect(() => {
-        if (editelement?.id) {
-            handlegetallquestions(editelement.id.toString());
-        }
-    }, [editelement?.id]);
+  // Score an Backend senden
+  const handleAddScore = async (quizId: string, scoreValue: string) => {
+    try {
+      if(!is_public){
+        return; // Privat-Quiz -> Score nicht senden
+      }
 
-    useEffect(() => {
-        const qid = questions.at(at)?.id;
-        if (qid) {
-            handlegetallanswers(qid.toString());
-        }
-    }, [questions, at]);
+      const formData = new FormData();
+      formData.append("quiz_id", quizId);
+      formData.append("score", scoreValue);
 
-    return ( 
-        <div>
-            {!(start) && <div> 
-                <p>
-                    Warnungen bitte lesen:<br></br>
-                    <ul style={{marginLeft: 2}}>
-                        <li>Wenn man geantwortet hat kann man nicht mehr korrigieren!!!</li>
-                        <li>Wenn man auf weiter oder Resultat senden klickt kann man nicht mehr zurück!!!</li>
-                        {((time) >= 0) && <li>Zum beantworten der Fragen haben sie nur <b>{((time/60 - ((time/60) % 1))).toString() + ":" + (time % 60 < 10 ? "0" + (time % 60).toString() : (time % 60).toString())}</b> min Zeit!!!</li>}
-                    </ul>
-                    Willst du das Quiz <b>{editelement?.name}</b> starten?
-                </p> 
-                <button onClick={() => {setstart(true); setcountdownstarted(true);}}>Start</button>
-            </div>} 
-            {end && <div>
-                <p>
-                    Resultat <b>{questions.length > 0 ? Math.round(((score / questions.length) * 100) * 100) / 100 : 0}%</b> wurde gesendet!!!
-                </p>
-            </div>}
-            {start && !end && <div>
-                <div class = "box">
-                    <p style="text-align: right">{stime}</p>
-                    <h3 style="text-align: center;">{questions.at(at)?.typ}</h3>
-                    <p>{questions.at(at)?.text}</p>
-                    {questions.at(at)?.typ != "Text Antwort" && <div> {answers.map(a => (
-                        <div class = "form-row box">
-                            <button onClick={() => {setscore(score + (notanswerd && a.is_true ? 1 : 0)); setnotanswerd(false); setis_correct(a.is_true); setshowcorrect(true);}}>{a.text}</button>
-                        </div>
-                    ))}</div>}
-                    {questions.at(at)?.typ == "Text Antwort" && <div> 
-                        <div class="form-row">
-                            <label htmlFor="name">Antwort:</label>
-                            <input type="text" id="name" name="name" maxlength={50} onInput={(e) => settainput((e.target as HTMLInputElement).value || "")}></input>
-                        </div>
-                        <button onClick={() => {setscore(score + (notanswerd && answers.length == 1 && answers.at(0)?.text === tainput ? 1 : 0)); setnotanswerd(false); setis_correct(answers.at(0)?.text === tainput); setshowcorrect(true);}}>Lösen</button>
-                    </div>}
-                    {showcorrect && <div>
-                        {is_correct && (<span style={{ color: "green" }}>
-                                Frage richig beantwortet
-                            </span>)}
-                        {!is_correct && (<span style={{ color: "red" }}>
-                                Frage falsch beantwortet
-                            </span>)}
-                    </div>
-                    }
-                    {questions.length - 1 <= at && <button onClick={() => {handleaddscore(editelement?.id.toString() || "", (questions.length > 0 ? Math.round(((score / questions.length) * 100) * 100) / 100 : 0).toString()); setend(true)}}>Resultat senden</button>}
-                    {questions.length - 1 > at &&<button onClick={() => {setat(at + 1); setnotanswerd(true); setshowcorrect(false);}}>Weiter</button>}
-                </div>
+      const response = await fetch(`http://localhost:8000/user/quiz/score/add-score`, {
+        method: "POST",
+        body: formData,
+        credentials: "include"
+      });
+
+      if (!response.ok) { 
+        const data = await response.json(); 
+        console.error(data.detail);
+        return; 
+      }
+
+      await response.json();
+      setCountdownStarted(false);
+
+    } catch (error) {
+      console.error(`Fehler beim Senden des Scores:`, error);
+    }
+  };
+
+  /* ---------------- Effekte ---------------- */
+  // Quizfragen laden, wenn Quiz ausgewählt wird
+  useEffect(() => {
+    if (editelement?.id) {
+      fetchQuestionsForQuiz(editelement.id.toString());
+    }
+  }, [editelement?.id]);
+
+  // Antworten laden, wenn aktuelle Frage sich ändert
+  useEffect(() => {
+    const questionId = questions.at(currentQuestionIndex)?.id;
+    if (questionId) {
+      fetchAnswersForQuestion(questionId.toString());
+    }
+  }, [questions, currentQuestionIndex]);
+
+  /* ---------------- UI ---------------- */
+  return ( 
+    <div>
+      {/* ---------------- Quiz Starten ---------------- */}
+      {!quizStarted && <div> 
+        <p>
+          Warnungen bitte lesen:<br/>
+          <ul style={{marginLeft: 2}}>
+            <li>Antworten können nach Bestätigung nicht mehr geändert werden.</li>
+            <li>Nach Klick auf "Weiter" oder "Resultat senden" kann nicht zurückgegangen werden.</li>
+            {remainingTime >= 0 && <li>Zum Beantworten der Fragen haben Sie nur <b>{`${Math.floor(remainingTime / 60)}:${remainingTime % 60 < 10 ? "0" + (remainingTime % 60).toString() : remainingTime % 60}`}</b> min Zeit.</li>}
+          </ul>
+          Willst du das Quiz <b>{editelement?.name}</b> starten?
+        </p> 
+        <button onClick={() => {setQuizStarted(true); setCountdownStarted(true);}}>Start</button>
+      </div>} 
+
+      {/* ---------------- Quiz Ende ---------------- */}
+      {quizEnded && <div>
+        <p>
+          Resultat <b>{questions.length > 0 ? Math.round(((score / questions.length) * 100) * 100) / 100 : 0}%</b> wurde gesendet!
+        </p>
+      </div>}
+
+      {/* ---------------- Aktuelle Frage anzeigen ---------------- */}
+      {quizStarted && !quizEnded && <div>
+        <div class="box">
+          <p style={{textAlign: "right"}}>{formattedTime}</p>
+          <h3 style={{textAlign: "center"}}>{questions.at(currentQuestionIndex)?.typ}</h3>
+          <p>{questions.at(currentQuestionIndex)?.text}</p>
+
+          {/* Multiple Choice Antworten */}
+          {questions.at(currentQuestionIndex)?.typ !== "Text Antwort" && <div>
+            {answers.map(a => (
+              <div class="form-row box">
+                <button onClick={() => {
+                  setScore(score + (questionNotAnswered && a.is_true ? 1 : 0));
+                  setQuestionNotAnswered(false);
+                  setIsAnswerCorrect(a.is_true);
+                  setShowAnswerFeedback(true);
+                }}>{a.text}</button>
+              </div>
+            ))}
+          </div>}
+
+          {/* Text Antworten */}
+          {questions.at(currentQuestionIndex)?.typ === "Text Antwort" && <div> 
+            <div class="form-row">
+              <label>Antwort:</label>
+              <input type="text" maxLength={50} onInput={(e) => setTextAnswerInput((e.target as HTMLInputElement).value || "")}/>
             </div>
-            } 
+            <button onClick={() => {
+              setScore(score + (questionNotAnswered && answers.length === 1 && answers.at(0)?.text === textAnswerInput ? 1 : 0));
+              setQuestionNotAnswered(false);
+              setIsAnswerCorrect(answers.at(0)?.text === textAnswerInput);
+              setShowAnswerFeedback(true);
+            }}>Lösen</button>
+          </div>}
+
+          {/* Feedback zur Antwort */}
+          {showAnswerFeedback && <div>
+            {isAnswerCorrect && (<span style={{ color: "green" }}>Frage richtig beantwortet</span>)}
+            {!isAnswerCorrect && (<span style={{ color: "red" }}>Frage falsch beantwortet</span>)}
+          </div>}
+
+          {/* Buttons für Weiter oder Resultat senden */}
+          {questions.length - 1 <= currentQuestionIndex && 
+            <button onClick={() => {
+              handleAddScore(editelement?.id.toString() || "", 
+                (questions.length > 0 ? Math.round(((score / questions.length) * 100) * 100) / 100 : 0).toString()
+              ); 
+              setQuizEnded(true);
+            }}>Resultat senden</button>
+          }
+          {questions.length - 1 > currentQuestionIndex &&
+            <button onClick={() => {
+              setCurrentQuestionIndex(currentQuestionIndex + 1);
+              setQuestionNotAnswered(true);
+              setShowAnswerFeedback(false);
+            }}>Weiter</button>
+          }
         </div>
-    ); 
+      </div>}
+    </div>
+  ); 
 }

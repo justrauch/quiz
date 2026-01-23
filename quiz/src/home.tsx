@@ -3,111 +3,243 @@ import { useState } from 'preact/hooks';
 import { route } from 'preact-router';
 
 export function Home(props: any) {
-  const [showsignup, setsignup] = useState(true);
-  const [showlogin, setlogin] = useState(false);
 
-  const [showerror, seterror] = useState(false)
-  const [errormessage, seterrormessage] = useState("");
+  /* ---------------- View State ---------------- */
+  const [showSignup, setShowSignup] = useState(true);
+  const [showLogin, setShowLogin] = useState(false);
 
-  const [su_name, setsu_Name] = useState("");
-  const [su_password, setsu_Password] = useState("");
-  const [su_wpassword, setsu_wPassword] = useState("");
+  /* ---------------- Error Handling ---------------- */
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const [li_name, setli_Name] = useState("");
-  const [li_password, setli_Password] = useState("");
+  /* ---------------- Signup Form State ---------------- */
+  const [signupUsername, setSignupUsername] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupPasswordRepeat, setSignupPasswordRepeat] = useState("");
 
-  const handlerequest = async (name: string, password: string, methode: string) => {
+  /* ---------------- Login Form State ---------------- */
+  const [loginUsername, setLoginUsername] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+
+  /**
+   * Sendet Authentifizierungsanfragen (Login oder Registrierung) an das Backend
+   *
+   * @param username - eingegebener Benutzername
+   * @param password - eingegebenes Passwort
+   * @param endpoint - "log-in" oder "sign-up"
+   */
+  const sendAuthRequest = async (
+    username: string,
+    password: string,
+    endpoint: string
+  ) => {
     try {
-      seterror(false);
+      // Fehlerzustand vor jeder Anfrage zurücksetzen
+      setShowError(false);
+
+      // FormData für die Anfrage erstellen
       const formData = new FormData();
-      formData.append("name", name);
+      formData.append("name", username);
       formData.append("pw", password);
 
-      const response = await fetch(`http://localhost:8000/${methode}`, {
-        method: "POST",
-        body: formData,
-        credentials: "include"
-      });
+      // Anfrage an das Backend
+      const response = await fetch(
+        `http://localhost:8000/${endpoint}`,
+        {
+          method: "POST",
+          body: formData,
+          credentials: "include"
+        }
+      );
 
-      if (!response.ok) { 
-        const data = await response.json(); 
-        seterrormessage(response.status === 409 || response.status === 401 ? data.detail : "Server Error versuchen sie es erneut");
-        seterror(true);
-        return; 
+      // Fehlerbehandlung bei ungültiger Antwort
+      if (!response.ok) {
+        const data = await response.json();
+
+        // Backend-Fehlermeldung bei bekannten Statuscodes anzeigen
+        setErrorMessage(
+          response.status === 409 || response.status === 401
+            ? data.detail
+            : "Serverfehler – bitte erneut versuchen"
+        );
+
+        setShowError(true);
+        return;
       }
 
-      const data = await response.json();
-      if(methode === "log-in"){
-        seterror(false); setlogin(true); setsignup(false); route('/quiz');
+      await response.json();
+
+      // Erfolgreicher Login → Weiterleitung zur Quiz-Seite
+      if (endpoint === "log-in") {
+        route('/quiz');
       }
-      if(methode === "sign-up"){
-        setlogin(true); setsignup(false);
+
+      // Erfolgreiche Registrierung → Wechsel zur Login-Ansicht
+      if (endpoint === "sign-up") {
+        setShowLogin(true);
+        setShowSignup(false);
       }
 
     } catch (error) {
-      console.error(`Fehler bei ${methode}:`, error);
+      console.error(`Authentifizierungsanfrage fehlgeschlagen (${endpoint}):`, error);
     }
   };
 
   return (
     <>
-      {(showsignup || showlogin) && <div class="div-buttons">
-        <button onClick={() => { setlogin(true); setsignup(false);}}>Einloggen</button>
-        <button onClick={() => { setlogin(false); setsignup(true);}}>Regestrieren</button>
-      </div>}
+      {/* ---------------- Navigation ---------------- */}
+      {(showSignup || showLogin) && (
+        <div class="div-buttons">
+          {/* Button zum Wechseln zum Login */}
+          <button
+            onClick={() => {
+              setShowLogin(true);
+              setShowSignup(false);
+            }}
+          >
+            Einloggen
+          </button>
 
-      <div>
-
-      {showerror && (
-        <span style={{ color: "red" }}>
-          {errormessage}
-        </span>
+          {/* Button zum Wechseln zur Registrierung */}
+          <button
+            onClick={() => {
+              setShowLogin(false);
+              setShowSignup(true);
+            }}
+          >
+            Registrieren
+          </button>
+        </div>
       )}
 
-      {showsignup && 
+      <div>
+        {/* ---------------- Fehlermeldung ---------------- */}
+        {showError && (
+          <span style={{ color: "red" }}>
+            {errorMessage}
+          </span>
+        )}
+
+        {/* ---------------- Registrierungsformular ---------------- */}
+        {showSignup && (
           <form>
             <div class="form-row">
-              <label htmlFor="name">Name:</label>
-              <input type="text" id="name" name="name" maxlength={50} onInput={(e) => setsu_Name((e.target as HTMLInputElement).value || "")}/>
+              <label>Name:</label>
+              <input
+                type="text"
+                maxLength={50}
+                onInput={e =>
+                  setSignupUsername(
+                    (e.target as HTMLInputElement).value || ""
+                  )
+                }
+              />
             </div>
 
             <div class="form-row">
-              <label htmlFor="pw">Password:</label>
-              <input type="password" id="pw" name="pw" onInput={(e) => setsu_Password((e.target as HTMLInputElement).value || "")}/>
+              <label>Passwort:</label>
+              <input
+                type="password"
+                onInput={e =>
+                  setSignupPassword(
+                    (e.target as HTMLInputElement).value || ""
+                  )
+                }
+              />
             </div>
 
-            {su_password !== su_wpassword && (
+            {/* Warnung bei nicht übereinstimmenden Passwörtern */}
+            {signupPassword !== signupPasswordRepeat && (
               <span style={{ color: "red" }}>
                 Passwort stimmt nicht überein!
               </span>
             )}
 
             <div class="form-row">
-              <label htmlFor="pw">Password wiederholen:</label>
-              <input type="password" id="wpw" name="wpw" onInput={(e) => setsu_wPassword((e.target as HTMLInputElement).value || "")}/>
+              <label>Passwort wiederholen:</label>
+              <input
+                type="password"
+                onInput={e =>
+                  setSignupPasswordRepeat(
+                    (e.target as HTMLInputElement).value || ""
+                  )
+                }
+              />
             </div>
 
-            <button type="button" class="myButton" onClick={(e) => {e.preventDefault(); handlerequest(su_name, su_password, "sign-up");}} disabled={ su_name.trim() === "" || su_password.trim() === "" || su_password !== su_wpassword }>Absenden</button>
+            {/* Absenden Button für Registrierung */}
+            <button
+              type="button"
+              class="myButton"
+              disabled={
+                signupUsername.trim() === "" ||
+                signupPassword.trim() === "" ||
+                signupPassword !== signupPasswordRepeat
+              }
+              onClick={e => {
+                e.preventDefault();
+                sendAuthRequest(
+                  signupUsername,
+                  signupPassword,
+                  "sign-up"
+                );
+              }}
+            >
+              Absenden
+            </button>
           </form>
-        }
+        )}
 
-        {showlogin && 
+        {/* ---------------- Loginformular ---------------- */}
+        {showLogin && (
           <form>
             <div class="form-row">
-              <label htmlFor="name">Name:</label>
-              <input type="text" id="name" name="name" maxlength={50} onInput={(e) => setli_Name((e.target as HTMLInputElement).value || "")}/>
+              <label>Name:</label>
+              <input
+                type="text"
+                maxLength={50}
+                onInput={e =>
+                  setLoginUsername(
+                    (e.target as HTMLInputElement).value || ""
+                  )
+                }
+              />
             </div>
 
             <div class="form-row">
-              <label htmlFor="pw">Password:</label>
-              <input type="password" id="pw" name="pw" onInput={(e) => setli_Password((e.target as HTMLInputElement).value || "")}/>
+              <label>Passwort:</label>
+              <input
+                type="password"
+                onInput={e =>
+                  setLoginPassword(
+                    (e.target as HTMLInputElement).value || ""
+                  )
+                }
+              />
             </div>
 
-            <button type="button" class="myButton" onClick={(e) => {e.preventDefault(); handlerequest(li_name, li_password, "log-in");}} disabled={ li_name.trim() === "" || li_password.trim() === ""}>Absenden</button>
+            {/* Absenden Button für Login */}
+            <button
+              type="button"
+              class="myButton"
+              disabled={
+                loginUsername.trim() === "" ||
+                loginPassword.trim() === ""
+              }
+              onClick={e => {
+                e.preventDefault();
+                sendAuthRequest(
+                  loginUsername,
+                  loginPassword,
+                  "log-in"
+                );
+              }}
+            >
+              Absenden
+            </button>
           </form>
-        }
-
+        )}
       </div>
     </>
-  )
+  );
 }

@@ -10,7 +10,7 @@ interface Quiz {
     time: number;
 } 
 
-interface Question { 
+interface QuestionItem { 
     id: number; 
     text: string; 
     typ: string; 
@@ -22,219 +22,254 @@ interface EditQuizProps {
 
 export function EditQuiz({ editelement }: EditQuizProps) { 
 
-    const [q_name, setq_Name] = useState(editelement?.name || "");
-    const [q_time, setq_time] = useState(editelement?.time ? (editelement.time >= 0 ? editelement.time : undefined) : undefined);
-    const [quest_name, setquest_Name] = useState(editelement?.name || "");
-    const [selectedPublic, setSelectedPublic] = useState(editelement?.is_public ? "true" : "false");
-    const [showerror, seterroraddquiz] = useState(false);
-    const [showerrorquest, seterroraddquest] = useState(false);
-    const [errormessageaddquiz, seterrormessageaddquiz] = useState("");
-    const [errorcolor, seterrorcolor] = useState("rot");
-    const [showquestions, setshowquestions] = useState(false);
-    const [questions, setquestions] = useState<Question[]>([]);
-    const [selectvalue, setselectvalue] = useState("Multiple choice");
+  /* ---------------- Quiz ---------------- */
+  const [quizName, setQuizName] = useState(editelement?.name || "");
+  const [quizTime, setQuizTime] = useState(editelement?.time ? (editelement.time >= 0 ? editelement.time : undefined) : undefined);
+  const [selectedPublic, setSelectedPublic] = useState(editelement?.is_public ? "true" : "false");
+  const [questions, setQuestions] = useState<QuestionItem[]>([]);
+  const [showQuestions, setShowQuestions] = useState(false);
+
+  /* ---------------- Neue Frage ---------------- */
+  const [newQuestionText, setNewQuestionText] = useState(editelement?.name || "");
+  const [questionTypeSelect, setQuestionTypeSelect] = useState("Multiple choice");
+
+  /* ---------------- Fehler / Feedback ---------------- */
+  const [showQuizError, setShowQuizError] = useState(false);
+  const [showQuestionError, setShowQuestionError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [errorColor, setErrorColor] = useState("red");
 
 
-    const handleeditquiz = async () => {
-        try {
-        const formData = new FormData();
-        formData.append("quiz_id", editelement?.id.toString() || "");
-        formData.append("quiz_name", q_name);
-        formData.append("is_public", selectedPublic);
-        formData.append("time", (q_time ? (q_time * 60 - (q_time * 60) % 1).toString() : "-1"));
-        const response = await fetch(`http://localhost:8000/edit-quiz`, {
-            method: "POST",
-            body: formData,
-            credentials: "include"
-        });
+  /* ---------------- Backend-Funktionen ---------------- */
+  // Quiz bearbeiten
+  const handleEditQuiz = async () => {
+    try {
+      const formData = new FormData();
+      formData.append("quiz_id", editelement?.id.toString() || "");
+      formData.append("quiz_name", quizName);
+      formData.append("is_public", selectedPublic);
+      formData.append("time", (quizTime ? (quizTime * 60 - (quizTime * 60) % 1).toString() : "-1"));
 
-        seterroraddquiz(true);
+      const response = await fetch(`http://localhost:8000/edit-quiz`, {
+        method: "POST",
+        body: formData,
+        credentials: "include"
+      });
 
-        if (!response.ok) { 
-            const data = await response.json(); 
-            seterrorcolor("red");
-            seterrormessageaddquiz(response.status === 409 || response.status === 401 ? data.detail : "Server Error versuchen sie es erneut");
-            console.error(data.detail);
-            return; 
-        }
-        seterrorcolor("green");
-        seterrormessageaddquiz("Änderung wurde vorgenommen")
-        const data = await response.json();
+      setShowQuizError(true);
 
-        } catch (error) {
-        console.error(`Fehler beim ausloggen:`, error);
-        }
-    };
-
-    const handlegetallquestions = async (quiz_id: string) => {
-        try {
-        const response = await fetch(`http://localhost:8000/quiz/${quiz_id}/questions`, {
-            method: "GET",
-            credentials: "include"
-        });
-
-        if (!response.ok) { 
-            const data = await response.json(); 
-            console.error(data.detail);
-            return; 
-        }
-        const data = await response.json();
-        setquestions(data);
-
-        } catch (error) {
-        console.error(`Fehler beim ausloggen:`, error);
-        }
-    };
-
-    const handleaddquestion = async (question_text: string, questions_type: string) => {
-      try {
-        const formData = new FormData();
-        formData.append("quiz_id", editelement?.id.toString() || "");
-        formData.append("question_text", question_text);
-        formData.append("typ", questions_type);
-        const response = await fetch("http://localhost:8000/quiz/add-question", {
-          method: "POST",
-          body: formData,
-          credentials: "include"
-        })
-
-        seterroraddquest(true);
-
-        if (!response.ok) { 
-            const data = await response.json(); 
-            seterrorcolor("red");
-            seterrormessageaddquiz(response.status === 409 || response.status === 401 ? data.detail : "Server Error versuchen sie es erneut");
-            console.error(data.detail);
-            return; 
-        }
-        seterrorcolor("green");
-        seterrormessageaddquiz("Änderung wurde vorgenommen")
-        const data = await response.json();
-        handlegetallquestions(editelement?.id.toString() || "");
-
-      } catch (error) {
-        console.error(`Fehler beim ausloggen:`, error);
+      if (!response.ok) { 
+        const data = await response.json(); 
+        setErrorColor("red");
+        setErrorMessage(response.status === 409 || response.status === 401 ? data.detail : "Serverfehler – bitte erneut versuchen");
+        console.error(data.detail);
+        return; 
       }
-    };
 
-    const handledeletequestion = async (question_id: string) => {
-        try {
-        const formData = new FormData();
-        formData.append("question_id", question_id);
-        const response = await fetch(`http://localhost:8000/quiz/delete-question`, {
-            method: "POST",
-            body: formData,
-            credentials: "include"
-        });
+      setErrorColor("green");
+      setErrorMessage("Änderung wurde vorgenommen");
+      await response.json();
 
-        if (!response.ok) { 
-            const data = await response.json(); 
-            console.error(`Fehler beim abfragen`);
-            return; 
-        }
+    } catch (error) {
+      console.error(`Fehler beim Bearbeiten des Quiz:`, error);
+    }
+  };
 
-        const data = await response.json();
-        handlegetallquestions(editelement?.id.toString() || "");
+  // Alle Fragen des Quiz abrufen
+  const fetchAllQuestions = async (quizId: string) => {
+    try {
+      const response = await fetch(`http://localhost:8000/quiz/${quizId}/questions`, {
+        method: "GET",
+        credentials: "include"
+      });
 
-        } catch (error) {
-        console.error(`Fehler beim ausloggen:`, error);
-        }
-    };
+      if (!response.ok) { 
+        const data = await response.json(); 
+        console.error(data.detail);
+        return; 
+      }
 
-    return (
+      const data = await response.json();
+      setQuestions(data);
+
+    } catch (error) {
+      console.error(`Fehler beim Abrufen der Fragen:`, error);
+    }
+  };
+
+  // Neue Frage hinzufügen
+  const handleAddQuestion = async (questionText: string, questionType: string) => {
+    try {
+      const formData = new FormData();
+      formData.append("quiz_id", editelement?.id.toString() || "");
+      formData.append("question_text", questionText);
+      formData.append("typ", questionType);
+
+      const response = await fetch("http://localhost:8000/quiz/add-question", {
+        method: "POST",
+        body: formData,
+        credentials: "include"
+      });
+
+      setShowQuestionError(true);
+
+      if (!response.ok) { 
+        const data = await response.json(); 
+        setErrorColor("red");
+        setErrorMessage(response.status === 409 || response.status === 401 ? data.detail : "Serverfehler – bitte erneut versuchen");
+        console.error(data.detail);
+        return; 
+      }
+
+      setErrorColor("green");
+      setErrorMessage("Änderung wurde vorgenommen");
+      await response.json();
+      fetchAllQuestions(editelement?.id.toString() || "");
+
+    } catch (error) {
+      console.error(`Fehler beim Hinzufügen der Frage:`, error);
+    }
+  };
+
+  // Frage löschen
+  const handleDeleteQuestion = async (questionId: string) => {
+    try {
+      const formData = new FormData();
+      formData.append("question_id", questionId);
+
+      const response = await fetch(`http://localhost:8000/quiz/delete-question`, {
+        method: "POST",
+        body: formData,
+        credentials: "include"
+      });
+
+      if (!response.ok) { 
+        const data = await response.json(); 
+        console.error(`Fehler beim Löschen der Frage`);
+        return; 
+      }
+
+      await response.json();
+      fetchAllQuestions(editelement?.id.toString() || "");
+
+    } catch (error) {
+      console.error(`Fehler beim Löschen der Frage:`, error);
+    }
+  };
+
+  /* ---------------- UI ---------------- */
+  return (
+    <div> 
+      {/* Navigation zwischen Quiz- und Fragenbereich */}
+      <div class="div-buttons">
+        <button onClick={() => { setShowQuizError(false); setShowQuestions(false); }}>Quiz</button>
+        <button onClick={() => { fetchAllQuestions(editelement?.id.toString() || ""); setShowQuestionError(false); setShowQuestions(true); }}>Fragen</button>
+      </div>
+
+      {/* Fragenbereich */}
+      {showQuestions && 
         <div> 
-            <div class="div-buttons">
-              <button onClick={() => { seterroraddquiz(false); setshowquestions(false); }}>Quiz</button>
-              <button onClick={() => { handlegetallquestions(editelement?.id.toString() || ""); seterroraddquest(false); setshowquestions(true); }}>Questions</button>
+          {showQuestionError && (
+            <span style={{ color: errorColor || "red" }}>
+              {errorMessage}
+            </span>
+          )}
+
+          <div class="box">
+            <h3 style={{textAlign: "center"}}>Frage erstellen</h3>
+
+            {/* Neue Frage */}
+            <div class="form-row">
+              <label>Frage:</label>
+              <input type="text" maxLength={50} onInput={(e) => setNewQuestionText((e.target as HTMLInputElement).value || "")}></input>
             </div>
-            {showquestions && 
-              <div> 
-                {showerrorquest && (
-                    <span style={{ color: errorcolor || "red" }}>
-                    {errormessageaddquiz}
-                    </span>
-                )}
-                <div class = "box">
-                <h3 style="text-align: center">Frage erstellen</h3>
-                <div class="form-row">
-                  <label htmlFor="name">Frage:</label>
-                  <input type="text" id="name" name="name" maxlength={50} onInput={(e) => setquest_Name((e.target as HTMLInputElement).value || "")}></input>
-                </div>
-                <div class="form-row">
-                    <label htmlFor="name">Typ:</label>
-                    <select
-                      value={selectvalue}
-                      onChange={(e) => setselectvalue((e.target as HTMLSelectElement).value)}
-                    >
-                      <option value="Multiple choice">Multiple choice</option>
-                      <option value="Wahr/Falsch">Wahr/Falsch</option>
-                      <option value="Text Antwort">Text Antwort</option>
-                    </select>
-                </div>
-                <button class = "myButton" onClick={() => {handleaddquestion(quest_name, selectvalue);}} disabled={ quest_name.trim() === ""}>hinzufügen</button>
-                </div>
-                  <table>
-                    <tbody>
-                    {questions.map(q => (
-                      <tr>
-                        <td>
-                          <div class = "box">
-                            <div class = "form-row">
-                              <button class = "myButton" onClick={() => {handledeletequestion(q.id.toString())}}>X</button>
-                            </div>
-                            <Question editelement={q}></Question>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                    </tbody>
-                  </table>
-                </div>
-                }
-            {!showquestions &&
-            <form>
-              {showerror && (
-                <span style={{ color: errorcolor || "red" }}>
-                {errormessageaddquiz}
-                </span>
-              )}
-              <div class="form-row">
-                <label htmlFor="name">Name:</label>
-                <input type="text" id="name" name="name" maxlength={50} defaultValue = {q_name} onInput={(e) => setq_Name((e.target as HTMLInputElement).value || "")}></input>
-              </div>
-                <div class="form-row">
-                  <label htmlFor="name">Maximal Zeit in min {"(leer lassen für kein Limit)"}:</label>
-                  <input type="number" id="time" step="0.1" name="time" defaultValue={q_time ? q_time/60 : ""} onInput={(e) => {const value = (e.target as HTMLInputElement).value; setq_time(value === "" ? -1 : Number(value));}}/>
-                </div>
-              <div class="form-row">
-                <label htmlFor="name">Sichbarkeit:</label>
-                <div>
-                  <label>
-                    <input 
-                      type="radio" 
-                      name="public" 
-                      value="false" 
-                      checked={selectedPublic === "false"} 
-                      onChange={(e) => setSelectedPublic((e.target as HTMLInputElement).value || "")}
-                    /> 
-                    Privat
-                  </label>
 
-                  <label>
-                    <input 
-                      type="radio" 
-                      name="public" 
-                      value="true" 
-                      checked={selectedPublic === "true"} 
-                      onChange={(e) => setSelectedPublic((e.target as HTMLInputElement).value || "")}
-                    /> 
-                    Öffenlich
-                  </label>
-                </div>
-              </div>
+            <div class="form-row">
+              <label>Typ:</label>
+              <select value={questionTypeSelect} onChange={(e) => setQuestionTypeSelect((e.target as HTMLSelectElement).value)}>
+                <option value="Multiple choice">Multiple choice</option>
+                <option value="Wahr/Falsch">Wahr/Falsch</option>
+                <option value="Text Antwort">Text Antwort</option>
+              </select>
+            </div>
 
-              <button type="button" class="myButton" onClick={(e) => {e.preventDefault(); handleeditquiz();}} disabled={ q_name.trim() === ""}>Absenden</button>
-            </form>}
-        </div> 
-    ); 
+            <button class="myButton" 
+              onClick={() => handleAddQuestion(newQuestionText, questionTypeSelect)} 
+              disabled={newQuestionText.trim() === ""}
+            >
+              hinzufügen
+            </button>
+          </div>
+
+          {/* Liste aller Fragen */}
+          <table>
+            <tbody>
+              {questions.map(q => (
+                <tr key={q.id}>
+                  <td>
+                    <div class="box">
+                      <div class="form-row">
+                        <button class="myButton" onClick={() => handleDeleteQuestion(q.id.toString())}>X</button>
+                      </div>
+                      <Question editelement={q}></Question>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      }
+
+      {/* Quiz bearbeiten Bereich */}
+      {!showQuestions &&
+        <form>
+          {showQuizError && (
+            <span style={{ color: errorColor || "red" }}>
+              {errorMessage}
+            </span>
+          )}
+
+          <div class="form-row">
+            <label>Name:</label>
+            <input type="text" maxLength={50} defaultValue={quizName} onInput={(e) => setQuizName((e.target as HTMLInputElement).value || "")}></input>
+          </div>
+
+          <div class="form-row">
+            <label>Maximale Zeit in min {"(leer lassen für kein Limit)"}:</label>
+            <input type="number" step="0.1" defaultValue={quizTime ? quizTime/60 : ""} onInput={(e) => { const value = (e.target as HTMLInputElement).value; setQuizTime(value === "" ? -1 : Number(value)); }}/>
+          </div>
+
+          <div class="form-row">
+            <label>Sichtbarkeit:</label>
+            <div>
+              <label>
+                <input 
+                  type="radio" 
+                  name="public" 
+                  value="false" 
+                  checked={selectedPublic === "false"} 
+                  onChange={(e) => setSelectedPublic((e.target as HTMLInputElement).value || "")}
+                /> 
+                Privat
+              </label>
+
+              <label>
+                <input 
+                  type="radio" 
+                  name="public" 
+                  value="true" 
+                  checked={selectedPublic === "true"} 
+                  onChange={(e) => setSelectedPublic((e.target as HTMLInputElement).value || "")}
+                /> 
+                Öffentlich
+              </label>
+            </div>
+          </div>
+
+          <button type="button" class="myButton" onClick={(e) => { e.preventDefault(); handleEditQuiz(); }} disabled={quizName.trim() === ""}>Absenden</button>
+        </form>
+      }
+    </div> 
+  ); 
 }
