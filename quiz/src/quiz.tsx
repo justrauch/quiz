@@ -226,58 +226,59 @@ export function Quiz(props: any){
   return (
     <>
       {/* ---------------- Logout Button ---------------- */}
-      <button class="myButton" style={{marginBottom: 5}} onClick={logout}>Abmelden</button>
+      <button id="logout-button" class="myButton" style={{marginBottom: 5}} onClick={logout}>Abmelden</button>
 
       {/* ---------------- Quiz Scores anzeigen ---------------- */}
       {showQuizScores && 
-        <div>
-          <div class="form-row">
-            <label>Filter:</label>
+        <div id="quiz-scores-section">
+          <div class="form-row" id="quiz-scores-filter-row">
+            <label id="quiz-scores-filter-label">Filter:</label>
             <input
+              id="quiz-scores-filter-input"
               type="text"
               value={filterText}
               onInput={e => setFilterText((e.target as HTMLInputElement).value)}
             />
-            <button onClick={() => {
+            <button id="quiz-scores-filter-button" onClick={() => {
               setFilteredScores(scores.filter(s =>
                 s.user_name.toLowerCase().includes(filterText.toLowerCase()) ||
                 (s.score.toString() + "%").includes(filterText)
               ));
             }}>filtern</button>
           </div>
-          <table>
+          <table id="quiz-scores-table">
             <thead>
               <tr>
-                <th>Nutzer Name</th>
-                <th>Bester Score</th>
+                <th id="scores-user-name-header">Nutzer Name</th>
+                <th id="scores-score-header">Bester Score</th>
               </tr>
             </thead>
             <tbody>
-              {filteredScores.map(s => (
-                <tr>
-                  <td>{s.user_name}</td>
-                  <td>{s.score}%</td>
+              {filteredScores.map((s, idx) => (
+                <tr id={`score-row-${idx}`}>
+                  <td id={`score-user-${idx}`}>{s.user_name}</td>
+                  <td id={`score-value-${idx}`}>{s.score}%</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <button onClick={() => setShowQuizScores(false)}>Zurück</button>
+          <button id="quiz-scores-back-button" onClick={() => setShowQuizScores(false)}>Zurück</button>
         </div>
       }
 
       {/* ---------------- Quiz bearbeiten ---------------- */}
       {showEditQuiz && 
-        <div>
+        <div id="edit-quiz-section">
           <EditQuiz editelement={editQuizItem}></EditQuiz>
-          <button onClick={() => {fetchAllQuizzes("quiz-get-all-private"); setShowEditQuiz(false)}}>Zurück</button>
+          <button id="edit-quiz-back-button" onClick={() => {fetchAllQuizzes("quiz-get-all-private"); setShowEditQuiz(false)}}>Zurück</button>
         </div>
       }
 
       {/* ---------------- Quiz starten ---------------- */}
       {startQuiz && 
-        <div>
+        <div id="start-quiz-section">
           <StartQuiz editelement={selectedQuiz} is_public={quizIsPublic}></StartQuiz>
-          <button onClick={() => {
+          <button id="start-quiz-back-button" onClick={() => {
             setStartQuiz(false); 
             setShowMyScores(false); 
             setShowQuizList(true); 
@@ -288,108 +289,112 @@ export function Quiz(props: any){
 
       {/* ---------------- Hauptansicht: Quiz erstellen / Listen / Scores ---------------- */}
       {!showEditQuiz && !startQuiz && !showQuizScores && 
-        <div>
+        <div id="main-quiz-section">
           {/* Buttons oben */}
-          <div class="div-buttons">
-            <button onClick={() => { setShowMyScores(false); setShowQuizList(false)}}>Quiz erstellen</button>
-            <button onClick={() => { setShowMyScores(false); setShowCreateQuizButton(true); fetchAllQuizzes("quiz-get-all-private"); setShowQuizList(true);}}>Meine Quizze</button>
-            <button onClick={() => { setShowMyScores(false); setShowCreateQuizButton(false); fetchAllQuizzes("quiz-get-all-public"); setShowQuizList(true);}}>Öffentliche Quizze</button>
-            <button onClick={() => { fetchAllUserScores(); setShowMyScores(true); setShowQuizList(false);}}>Meine Scores</button>
+          <div class="div-buttons" id="main-buttons">
+            <button id="create-quiz-button" onClick={() => { setShowMyScores(false); setShowQuizList(false)}}>Quiz erstellen</button>
+            <button id="my-quizzes-button" onClick={() => { setShowMyScores(false); setShowCreateQuizButton(true); fetchAllQuizzes("quiz-get-all-private"); setShowQuizList(true);}}>Meine Quizze</button>
+            <button id="public-quizzes-button" onClick={() => { setShowMyScores(false); setShowCreateQuizButton(false); fetchAllQuizzes("quiz-get-all-public"); setShowQuizList(true);}}>Öffentliche Quizze</button>
+            <button id="my-scores-button" onClick={() => { fetchAllUserScores(); setShowMyScores(true); setShowQuizList(false);}}>Meine Scores</button>
           </div>
 
           {/* ---------------- Eigene Scores anzeigen ---------------- */}
-          {!showQuizList && showMyScores && <div>
-            <div class="form-row">
-              <label>Filter:</label>
-              <input type="text" value={filterText} onInput={e => setFilterText((e.target as HTMLInputElement).value)} />
-              <button onClick={() => {
-                setFilteredScores(scores.filter(s =>
-                  s.quiz_name.toLowerCase().includes(filterText.toLowerCase()) ||
-                  (s.score.toString() + "%").includes(filterText)
-                ));
-              }}>filtern</button>
-            </div>
-            <table>
-              <thead>
-                <tr>
-                  <th>Quiz Name</th>
-                  <th>Bester Score</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredScores.map(s => (
+          {!showQuizList && showMyScores && 
+            <div id="my-scores-section">
+              <div class="form-row" id="my-scores-filter-row">
+                <label id="my-scores-filter-label">Filter:</label>
+                <input id="my-scores-filter-input" type="text" value={filterText} onInput={e => setFilterText((e.target as HTMLInputElement).value)} />
+                <button id="my-scores-filter-button" onClick={() => {
+                  setFilteredScores(scores.filter(s =>
+                    s.quiz_name.toLowerCase().includes(filterText.toLowerCase()) ||
+                    (s.score.toString() + "%").includes(filterText)
+                  ));
+                }}>filtern</button>
+              </div>
+              <table id="my-scores-table">
+                <thead>
                   <tr>
-                    <td>{s.quiz_name}</td>
-                    <td>{s.score}%</td>
+                    <th id="my-scores-quiz-name-header">Quiz Name</th>
+                    <th id="my-scores-score-header">Bester Score</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>}
+                </thead>
+                <tbody>
+                  {filteredScores.map((s, idx) => (
+                    <tr id={`my-score-row-${idx}`}>
+                      <td id={`my-score-quiz-${idx}`}>{s.quiz_name}</td>
+                      <td id={`my-score-value-${idx}`}>{s.score}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          }
 
           {/* ---------------- Quiz erstellen ---------------- */}
           {!showQuizList && !showMyScores &&
-            <div>
-              <form>
+            <div id="create-quiz-section">
+              <form id="create-quiz-form">
                 {showAddQuizError && (
-                  <span style={{ color: "red" }}>
+                  <span id="add-quiz-error" style={{ color: "red" }}>
                     {addQuizErrorMessage}
                   </span>
                 )}
-                <div class="form-row">
-                  <label>Name:</label>
-                  <input type="text" maxLength={50} onInput={(e) => setQuizNameInput((e.target as HTMLInputElement).value || "")}/>
+                <div class="form-row" id="quiz-name-row">
+                  <label id="quiz-name-label">Name:</label>
+                  <input id="quiz-name-input" type="text" maxLength={50} onInput={(e) => setQuizNameInput((e.target as HTMLInputElement).value || "")}/>
                 </div>
-                <div class="form-row">
-                  <label>Maximal Zeit in min (leer lassen für kein Limit):</label>
-                  <input type="number" onInput={(e) => {const value = (e.target as HTMLInputElement).value; setQuizTimeInput(value === "" ? -1 : Number(value));}}/>
+                <div class="form-row" id="quiz-time-row">
+                  <label id="quiz-time-label">Maximal Zeit in min (leer lassen für kein Limit):</label>
+                  <input id="quiz-time-input" type="number" onInput={(e) => {const value = (e.target as HTMLInputElement).value; setQuizTimeInput(value === "" ? -1 : Number(value));}}/>
                 </div>
-                <div class="form-row">
-                  <label>Sichtbarkeit:</label>
-                  <div>
-                    <label>
-                      <input type="radio" name="public" value="false" checked={selectedVisibility === "false"} onChange={(e) => setSelectedVisibility((e.target as HTMLInputElement).value || "")}/> Privat
+                <div class="form-row" id="quiz-visibility-row">
+                  <label id="quiz-visibility-label">Sichtbarkeit:</label>
+                  <div id="quiz-visibility-options">
+                    <label id="quiz-visibility-private-label">
+                      <input id="quiz-visibility-private-radio" type="radio" name="public" value="false" checked={selectedVisibility === "false"} onChange={(e) => setSelectedVisibility((e.target as HTMLInputElement).value || "")}/> Privat
                     </label>
-                    <label>
-                      <input type="radio" name="public" value="true" checked={selectedVisibility === "true"} onChange={(e) => setSelectedVisibility((e.target as HTMLInputElement).value || "")}/> Öffentlich
+                    <label id="quiz-visibility-public-label">
+                      <input id="quiz-visibility-public-radio" type="radio" name="public" value="true" checked={selectedVisibility === "true"} onChange={(e) => setSelectedVisibility((e.target as HTMLInputElement).value || "")}/> Öffentlich
                     </label>
                   </div>
                 </div>
-                <button type="button" class="myButton" onClick={(e) => {e.preventDefault(); addQuiz(quizNameInput, quizTimeInput);}} disabled={quizNameInput.trim() === ""}>Absenden</button>
+                <button id="create-quiz-submit" type="button" class="myButton" onClick={(e) => {e.preventDefault(); addQuiz(quizNameInput, quizTimeInput);}} disabled={quizNameInput.trim() === ""}>Absenden</button>
               </form>
             </div>
           }
 
           {/* ---------------- Quiz Liste anzeigen ---------------- */}
           {showQuizList &&
-            <div>
-              {!showCreateQuizButton && <button onClick={() => fetchAllQuizzes("quiz-get-all-public")}>Neuladen</button>}
-              <div class="form-row">
-                <label>Filter:</label>
-                <input type="text" value={filterText} onInput={e => setFilterText((e.target as HTMLInputElement).value)} />
-                <button onClick={() => { setFilteredQuizzes(quizzes.filter(q => q.name.toLowerCase().includes(filterText.toLowerCase())))}}>filtern</button>
+            <div id="quiz-list-section">
+              {!showCreateQuizButton && <button id="reload-quizzes-button" onClick={() => fetchAllQuizzes("quiz-get-all-public")}>Neuladen</button>}
+              <div class="form-row" id="quiz-list-filter-row">
+                <label id="quiz-list-filter-label">Filter:</label>
+                <input id="quiz-list-filter-input" type="text" value={filterText} onInput={e => setFilterText((e.target as HTMLInputElement).value)} />
+                <button id="quiz-list-filter-button" onClick={() => { setFilteredQuizzes(quizzes.filter(q => q.name.toLowerCase().includes(filterText.toLowerCase())))}}>filtern</button>
               </div>
-              <table>
+              <table id="quiz-list-table">
                 <thead>
                   <tr>
-                    <th>Name</th>
-                    <th></th>
+                    <th id="quiz-list-name-header">Name</th>
+                    <th id="quiz-list-actions-header"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredQuizzes.map(q => (
-                    <tr>
-                      <td>{q.name}</td>
-                      <button onClick={() => { setSelectedQuiz(q); setStartQuiz(true); setShowQuizList(false); setQuizIsPublic(!showCreateQuizButton); setShowCreateQuizButton(false);}}>
-                        {showCreateQuizButton ? "test" : "start"}
-                      </button>
-                      {!showCreateQuizButton && <button onClick={() => {fetchScoresForQuiz(q.id.toString()); setShowQuizScores(true)}}>Scores</button>}
-                      {showCreateQuizButton &&
-                        <td>
-                          <button onClick={() => {setEditQuizItem(q); setShowEditQuiz(true);}}>edit</button>
-                          <button onClick={() => deleteQuiz(q.id + "")}>delete</button>
-                        </td>
-                      }
+                  {filteredQuizzes.map((q, idx) => (
+                    <tr id={`quiz-row-${idx}`}>
+                      <td id={`quiz-name-${idx}`}>{q.name}</td>
+                      <td id={`quiz-action-buttons-${idx}`}>
+                        <button id={`quiz-start-button-${idx}`} onClick={() => { setSelectedQuiz(q); setStartQuiz(true); setShowQuizList(false); setQuizIsPublic(!showCreateQuizButton); setShowCreateQuizButton(false);}}>
+                          {showCreateQuizButton ? "test" : "start"}
+                        </button>
+                        {!showCreateQuizButton && <button id={`quiz-scores-button-${idx}`} onClick={() => {fetchScoresForQuiz(q.id.toString()); setShowQuizScores(true)}}>Scores</button>}
+                        {showCreateQuizButton &&
+                          <>
+                            <button id={`quiz-edit-button-${idx}`} onClick={() => {setEditQuizItem(q); setShowEditQuiz(true);}}>edit</button>
+                            <button id={`quiz-delete-button-${idx}`} onClick={() => deleteQuiz(q.id + "")}>delete</button>
+                          </>
+                        }
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -400,4 +405,5 @@ export function Quiz(props: any){
       }
     </>
   )
+
 }

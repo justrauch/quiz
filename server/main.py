@@ -60,7 +60,9 @@ class Score(Base):
     quiz_id = Column(Integer, nullable=False)
     score = Column(String(50), nullable=False)
 
-SQLALCHEMY_DATABASE_URL = "mysql+pymysql://root@host.docker.internal:3306/quiz"
+# True für Tests False für normalen Gebrauch
+is_test = False
+SQLALCHEMY_DATABASE_URL = f"mysql+pymysql://root@host.docker.internal:3306/quiz{"_test" if is_test else ""}"
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -498,13 +500,20 @@ def delete_answer(answer_id: int = Form(...), session_id: str | None = Cookie(de
         answer = session.query(Answer).filter(Answer.id == answer_id).first()
         if not answer:
             raise HTTPException(status_code=404, detail="Answer nicht gefunden")
-
+        
         question = session.query(Question).filter(Question.id == answer.question_id).first()
+        
         quiz = session.query(Quiz).filter(Quiz.id == question.quiz_id).first()
         if quiz.creator_id != user.id:
             raise HTTPException(status_code=403, detail="Keine Berechtigung")
 
         session.delete(answer)
+
+        if question.typ == "Wahr/Falsch":
+            other_answers = session.query(Answer).filter(Answer.question_id == question.id, Answer.id != answer_id ).all()
+            for ans in other_answers:
+                session.delete(ans)
+
         try:
             session.commit()
             return {"message": "answer gelöscht"}

@@ -159,41 +159,41 @@ export function EditQuiz({ editelement }: EditQuizProps) {
 
   /* ---------------- UI ---------------- */
   return (
-    <div> 
+    <div id="edit-quiz-question-container"> 
       {/* Navigation zwischen Quiz- und Fragenbereich */}
-      <div class="div-buttons">
-        <button onClick={() => { setShowQuizError(false); setShowQuestions(false); }}>Quiz</button>
-        <button onClick={() => { fetchAllQuestions(editelement?.id.toString() || ""); setShowQuestionError(false); setShowQuestions(true); }}>Fragen</button>
+      <div class="div-buttons" id="quiz-question-nav">
+        <button id="nav-quiz-button" onClick={() => { setShowQuizError(false); setShowQuestions(false); }}>Quiz</button>
+        <button id="nav-questions-button" onClick={() => { fetchAllQuestions(editelement?.id.toString() || ""); setShowQuestionError(false); setShowQuestions(true); }}>Fragen</button>
       </div>
 
       {/* Fragenbereich */}
       {showQuestions && 
-        <div> 
+        <div id="questions-section"> 
           {showQuestionError && (
-            <span style={{ color: errorColor || "red" }}>
+            <span id="questions-error" style={{ color: errorColor || "red" }}>
               {errorMessage}
             </span>
           )}
 
-          <div class="box">
-            <h3 style={{textAlign: "center"}}>Frage erstellen</h3>
+          <div class="box" id="new-question-box">
+            <h3 id="new-question-header" style={{textAlign: "center"}}>Frage erstellen</h3>
 
             {/* Neue Frage */}
-            <div class="form-row">
-              <label>Frage:</label>
-              <input type="text" maxLength={50} onInput={(e) => setNewQuestionText((e.target as HTMLInputElement).value || "")}></input>
+            <div class="form-row" id="new-question-text-row">
+              <label id="new-question-label">Frage:</label>
+              <input id="new-question-input" type="text" maxLength={50} onInput={(e) => setNewQuestionText((e.target as HTMLInputElement).value || "")}></input>
             </div>
 
-            <div class="form-row">
-              <label>Typ:</label>
-              <select value={questionTypeSelect} onChange={(e) => setQuestionTypeSelect((e.target as HTMLSelectElement).value)}>
+            <div class="form-row" id="new-question-type-row">
+              <label id="new-question-type-label">Typ:</label>
+              <select id="new-question-type-select" value={questionTypeSelect} onChange={(e) => setQuestionTypeSelect((e.target as HTMLSelectElement).value)}>
                 <option value="Multiple choice">Multiple choice</option>
                 <option value="Wahr/Falsch">Wahr/Falsch</option>
                 <option value="Text Antwort">Text Antwort</option>
               </select>
             </div>
 
-            <button class="myButton" 
+            <button id="add-question-button" class="myButton" 
               onClick={() => handleAddQuestion(newQuestionText, questionTypeSelect)} 
               disabled={newQuestionText.trim() === ""}
             >
@@ -202,14 +202,14 @@ export function EditQuiz({ editelement }: EditQuizProps) {
           </div>
 
           {/* Liste aller Fragen */}
-          <table>
+          <table id="questions-table">
             <tbody>
-              {questions.map(q => (
-                <tr key={q.id}>
+              {questions.map((q) => (
+                <tr key={q.id} id={`question-row-${q.id}`}>
                   <td>
-                    <div class="box">
-                      <div class="form-row">
-                        <button class="myButton" onClick={() => handleDeleteQuestion(q.id.toString())}>X</button>
+                    <div class="box" id={`question-box-${q.id}`}>
+                      <div class="form-row" id={`delete-question-row-${q.id}`}>
+                        <button id={`delete-question-button-${q.id}`} class="myButton" onClick={() => handleDeleteQuestion(q.id.toString())}>X</button>
                       </div>
                       <Question editelement={q}></Question>
                     </div>
@@ -223,28 +223,28 @@ export function EditQuiz({ editelement }: EditQuizProps) {
 
       {/* Quiz bearbeiten Bereich */}
       {!showQuestions &&
-        <form>
+        <form id="edit-quiz-form">
           {showQuizError && (
-            <span style={{ color: errorColor || "red" }}>
+            <span id="edit-quiz-error" style={{ color: errorColor || "red" }}>
               {errorMessage}
             </span>
           )}
 
-          <div class="form-row">
-            <label>Name:</label>
-            <input type="text" maxLength={50} defaultValue={quizName} onInput={(e) => setQuizName((e.target as HTMLInputElement).value || "")}></input>
+          <div class="form-row" id="edit-quiz-name-row">
+            <label id="edit-quiz-name-label">Name:</label>
+            <input id="edit-quiz-name-input" type="text" maxLength={50} defaultValue={quizName} onInput={(e) => setQuizName((e.target as HTMLInputElement).value || "")}></input>
           </div>
 
-          <div class="form-row">
-            <label>Maximale Zeit in min {"(leer lassen für kein Limit)"}:</label>
-            <input type="number" step="0.1" defaultValue={quizTime ? quizTime/60 : ""} onInput={(e) => { const value = (e.target as HTMLInputElement).value; setQuizTime(value === "" ? -1 : Number(value)); }}/>
+          <div class="form-row" id="edit-quiz-time-row">
+            <label id="edit-quiz-time-label">Maximale Zeit in min {"(leer lassen für kein Limit)"}:</label>
+            <input id="edit-quiz-time-input" type="number" step="0.1" defaultValue={quizTime ? quizTime/60 : ""} onInput={(e) => { const value = (e.target as HTMLInputElement).value; setQuizTime(value === "" ? -1 : Number(value)); }}/>
           </div>
 
-          <div class="form-row">
-            <label>Sichtbarkeit:</label>
-            <div>
-              <label>
-                <input 
+          <div class="form-row" id="edit-quiz-visibility-row">
+            <label id="edit-quiz-visibility-label">Sichtbarkeit:</label>
+            <div id="edit-quiz-visibility-options">
+              <label id="edit-quiz-private-label">
+                <input id="edit-quiz-private-radio" 
                   type="radio" 
                   name="public" 
                   value="false" 
@@ -254,8 +254,8 @@ export function EditQuiz({ editelement }: EditQuizProps) {
                 Privat
               </label>
 
-              <label>
-                <input 
+              <label id="edit-quiz-public-label">
+                <input id="edit-quiz-public-radio" 
                   type="radio" 
                   name="public" 
                   value="true" 
@@ -267,7 +267,7 @@ export function EditQuiz({ editelement }: EditQuizProps) {
             </div>
           </div>
 
-          <button type="button" class="myButton" onClick={(e) => { e.preventDefault(); handleEditQuiz(); }} disabled={quizName.trim() === ""}>Absenden</button>
+          <button id="edit-quiz-submit-button" type="button" class="myButton" onClick={(e) => { e.preventDefault(); handleEditQuiz(); }} disabled={quizName.trim() === ""}>Absenden</button>
         </form>
       }
     </div> 

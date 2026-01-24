@@ -166,21 +166,27 @@ export function Question({ editelement }: QuestionEditorProps) {
 
   /* ---------------- UI ---------------- */
   return ( 
-    <div> 
+    <div id={`edit-question-container-${editelement?.id.toString() || ""}`}> 
       {/* Frage bearbeiten */}
-      <div>
-        <button class="myButton" 
+      <div id={`edit-question-header-${editelement?.id.toString() || ""}`}>
+        <button 
+          id={`edit-question-button-${editelement?.id.toString() || ""}`}
+          class="myButton" 
           onClick={() => handleEditQuestion(editelement?.id.toString() || "", questionText || "", questionType || "")} 
-          disabled={questionText === ""}>#</button>
+          disabled={questionText === ""}
+        >
+          #
+        </button>
       </div>
 
-      <h3 style={{textAlign: "center"}}>{editelement?.typ}</h3>
+      <h3 id={`question-type-header-${editelement?.id.toString() || ""}`} style={{textAlign: "center"}}>{editelement?.typ}</h3>
       {showQuestionError && (
-        <span style={{ color: questionErrorColor || "red" }}>
+        <span id={`question-error-${editelement?.id.toString() || ""}`} style={{ color: questionErrorColor || "red" }}>
           {questionErrorMessage}
         </span>
       )}
       <input 
+        id={`question-input-${editelement?.id.toString() || ""}`}
         class="input-full" 
         type="text" 
         maxLength={50} 
@@ -190,35 +196,41 @@ export function Question({ editelement }: QuestionEditorProps) {
 
       {/* Antworten anzeigen */}
       {answers.map(a => (
-        <div class="form-row box">
-          <p>{a.text} ({a.is_true ? "Wahr" : "Falsch"})</p>
-          <button onClick={() => handleDeleteAnswer(a.id.toString())}>X</button>
+        <div class="form-row box" id={`answer-row-${editelement?.id.toString() || ""}-${a.id}`}>
+          <p id={`answer-text-${editelement?.id.toString() || ""}-${a.id}`}>{a.text} ({a.is_true ? "Wahr" : "Falsch"})</p>
+          <button id={`delete-answer-button-${editelement?.id.toString() || ""}-${a.id}`} onClick={() => handleDeleteAnswer(a.id.toString())}>X</button>
         </div>
       ))}
 
       {/* Neue Antwort hinzufügen */}
-      <div class="box">
-        <h3 style={{textAlign: "center"}}>Antwort hinzufügen</h3>
+      <div class="box" id={`add-answer-section-${editelement?.id.toString() || ""}`}>
+        <h3 id={`add-answer-header-${editelement?.id.toString() || ""}`} style={{textAlign: "center"}}>Antwort hinzufügen</h3>
         {showAnswerError && (
-          <span style={{ color: answerErrorColor || "red" }}>
+          <span id={`answer-error-${editelement?.id.toString() || ""}`} style={{ color: answerErrorColor || "red" }}>
             {answerErrorMessage}
           </span>
         )}
 
         {/* Antworttext, außer bei Wahr/Falsch-Fragen */}
-        {editelement?.typ !== "Wahr/Falsch" && <div class="form-row">
-          <label>Antwort:</label>
-          <input type="text" maxLength={50} onInput={(e) => setNewAnswerText((e.target as HTMLInputElement).value || "")}/>
+        {editelement?.typ !== "Wahr/Falsch" && <div class="form-row" id={`new-answer-text-row-${editelement?.id.toString() || ""}`}>
+          <label id={`new-answer-label-${editelement?.id.toString() || ""}`}>Antwort:</label>
+          <input 
+            id={`new-answer-input-${editelement?.id.toString() || ""}`}
+            type="text" 
+            maxLength={50} 
+            onInput={(e) => setNewAnswerText((e.target as HTMLInputElement).value || "")}
+          />
         </div>}
 
         {/* Richtigkeit auswählen */}
-        <div class="form-row">
-          <label>Richtigkeit:</label>
-          <div>
-            {editelement?.typ !== "Text Antwort" && <label>
+        <div class="form-row" id={`new-answer-correctness-row-${editelement?.id.toString() || ""}`}>
+          <label id={`correctness-label-${editelement?.id.toString() || ""}`}>Richtigkeit:</label>
+          <div id={`correctness-options-${editelement?.id.toString() || ""}`}>
+            {editelement?.typ !== "Text Antwort" && <label id={`correct-false-label-${editelement?.id.toString() || ""}`}>
               <input 
+                id={`correct-false-radio-${editelement?.id.toString() || ""}`}
                 type="radio" 
-                name={`correct-${editelement?.id}`} 
+                name={`correct-${editelement?.id.toString() || ""}`} 
                 value="false" 
                 checked={selectedAnswerCorrect === "false"} 
                 onChange={(e) => setSelectedAnswerCorrect((e.target as HTMLInputElement).value || "")}
@@ -226,10 +238,11 @@ export function Question({ editelement }: QuestionEditorProps) {
               Falsch
             </label>}
 
-            <label>
+            <label id={`correct-true-label-${editelement?.id.toString() || ""}`}>
               <input 
+                id={`correct-true-radio-${editelement?.id.toString() || ""}`}
                 type="radio" 
-                name={`correct-${editelement?.id}`}
+                name={`correct-${editelement?.id.toString() || ""}`}
                 value="true" 
                 checked={selectedAnswerCorrect === "true"} 
                 onChange={(e) => setSelectedAnswerCorrect((e.target as HTMLInputElement).value || "")}
@@ -241,6 +254,7 @@ export function Question({ editelement }: QuestionEditorProps) {
 
         {/* Button zum Hinzufügen */}
         <button 
+          id={`add-answer-button-${editelement?.id.toString() || ""}`}
           style={{ display: "block", marginLeft: "auto" }} 
           onClick={() => handleAddAnswer(editelement?.id.toString() || "", newAnswerText, selectedAnswerCorrect)}
           disabled={editelement?.typ !== "Wahr/Falsch" && newAnswerText.trim() === ""}
@@ -249,5 +263,5 @@ export function Question({ editelement }: QuestionEditorProps) {
         </button>
       </div>
     </div> 
-  ); 
+  );
 }

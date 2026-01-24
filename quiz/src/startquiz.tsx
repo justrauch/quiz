@@ -167,40 +167,40 @@ const [textAnswerInput, setTextAnswerInput] = useState("");
 
   /* ---------------- UI ---------------- */
   return ( 
-    <div>
+    <div id="quiz-container">
       {/* ---------------- Quiz Starten ---------------- */}
-      {!quizStarted && <div> 
-        <p>
+      {!quizStarted && <div id="quiz-start">
+        <p id="quiz-warning">
           Warnungen bitte lesen:<br/>
-          <ul style={{marginLeft: 2}}>
-            <li>Antworten können nach Bestätigung nicht mehr geändert werden.</li>
-            <li>Nach Klick auf "Weiter" oder "Resultat senden" kann nicht zurückgegangen werden.</li>
-            {remainingTime >= 0 && <li>Zum Beantworten der Fragen haben Sie nur <b>{`${Math.floor(remainingTime / 60)}:${remainingTime % 60 < 10 ? "0" + (remainingTime % 60).toString() : remainingTime % 60}`}</b> min Zeit.</li>}
+          <ul id="quiz-warning-list" style={{marginLeft: 2}}>
+            <li id="warning-answers">Antworten können nach Bestätigung nicht mehr geändert werden.</li>
+            <li id="warning-no-back">Nach Klick auf "Weiter" oder "Resultat senden" kann nicht zurückgegangen werden.</li>
+            {remainingTime >= 0 && <li id="warning-time">Zum Beantworten der Fragen haben Sie nur <b id="time-remaining">{`${Math.floor(remainingTime / 60)}:${remainingTime % 60 < 10 ? "0" + (remainingTime % 60).toString() : remainingTime % 60}`}</b> min Zeit.</li>}
           </ul>
-          Willst du das Quiz <b>{editelement?.name}</b> starten?
+          Willst du das Quiz <b id="quiz-name">{editelement?.name}</b> starten?
         </p> 
-        <button onClick={() => {setQuizStarted(true); setCountdownStarted(true);}}>Start</button>
+        <button id="start-quiz-button" onClick={() => {setQuizStarted(true); setCountdownStarted(true);}}>Start</button>
       </div>} 
 
       {/* ---------------- Quiz Ende ---------------- */}
-      {quizEnded && <div>
-        <p>
-          Resultat <b>{questions.length > 0 ? Math.round(((score / questions.length) * 100) * 100) / 100 : 0}%</b> wurde gesendet!
+      {quizEnded && <div id="quiz-end">
+        <p id="quiz-result">
+          Resultat <b id="result-score">{questions.length > 0 ? Math.round(((score / questions.length) * 100) * 100) / 100 : 0}%</b> wurde gesendet!
         </p>
       </div>}
 
       {/* ---------------- Aktuelle Frage anzeigen ---------------- */}
-      {quizStarted && !quizEnded && <div>
-        <div class="box">
-          <p style={{textAlign: "right"}}>{formattedTime}</p>
-          <h3 style={{textAlign: "center"}}>{questions.at(currentQuestionIndex)?.typ}</h3>
-          <p>{questions.at(currentQuestionIndex)?.text}</p>
+      {quizStarted && !quizEnded && <div id="quiz-question-section">
+        <div class="box" id="question-box">
+          <p id="timer" style={{textAlign: "right"}}>{formattedTime}</p>
+          <h3 id="question-type" style={{textAlign: "center"}}>{questions.at(currentQuestionIndex)?.typ}</h3>
+          <p id="question-text">{questions.at(currentQuestionIndex)?.text}</p>
 
           {/* Multiple Choice Antworten */}
-          {questions.at(currentQuestionIndex)?.typ !== "Text Antwort" && <div>
+          {questions.at(currentQuestionIndex)?.typ !== "Text Antwort" && <div id="multiple-choice-answers">
             {answers.map(a => (
-              <div class="form-row box">
-                <button onClick={() => {
+              <div class="form-row box" id={`answer-row-${a.id}`}>
+                <button id={`answer-button-${a.id}`} onClick={() => {
                   setScore(score + (questionNotAnswered && a.is_true ? 1 : 0));
                   setQuestionNotAnswered(false);
                   setIsAnswerCorrect(a.is_true);
@@ -211,12 +211,12 @@ const [textAnswerInput, setTextAnswerInput] = useState("");
           </div>}
 
           {/* Text Antworten */}
-          {questions.at(currentQuestionIndex)?.typ === "Text Antwort" && <div> 
-            <div class="form-row">
-              <label>Antwort:</label>
-              <input type="text" maxLength={50} onInput={(e) => setTextAnswerInput((e.target as HTMLInputElement).value || "")}/>
+          {questions.at(currentQuestionIndex)?.typ === "Text Antwort" && <div id="text-answer-section"> 
+            <div class="form-row" id="text-answer-row">
+              <label id="text-answer-label">Antwort:</label>
+              <input id="text-answer-input" type="text" maxLength={50} onInput={(e) => setTextAnswerInput((e.target as HTMLInputElement).value || "")}/>
             </div>
-            <button onClick={() => {
+            <button id="text-answer-submit" onClick={() => {
               setScore(score + (questionNotAnswered && answers.length === 1 && answers.at(0)?.text === textAnswerInput ? 1 : 0));
               setQuestionNotAnswered(false);
               setIsAnswerCorrect(answers.at(0)?.text === textAnswerInput);
@@ -225,14 +225,14 @@ const [textAnswerInput, setTextAnswerInput] = useState("");
           </div>}
 
           {/* Feedback zur Antwort */}
-          {showAnswerFeedback && <div>
-            {isAnswerCorrect && (<span style={{ color: "green" }}>Frage richtig beantwortet</span>)}
-            {!isAnswerCorrect && (<span style={{ color: "red" }}>Frage falsch beantwortet</span>)}
+          {showAnswerFeedback && <div id="answer-feedback">
+            {isAnswerCorrect && (<span id="feedback-correct" style={{ color: "green" }}>Frage richtig beantwortet</span>)}
+            {!isAnswerCorrect && (<span id="feedback-wrong" style={{ color: "red" }}>Frage falsch beantwortet</span>)}
           </div>}
 
           {/* Buttons für Weiter oder Resultat senden */}
           {questions.length - 1 <= currentQuestionIndex && 
-            <button onClick={() => {
+            <button id="submit-result-button" onClick={() => {
               handleAddScore(editelement?.id.toString() || "", 
                 (questions.length > 0 ? Math.round(((score / questions.length) * 100) * 100) / 100 : 0).toString()
               ); 
@@ -240,7 +240,7 @@ const [textAnswerInput, setTextAnswerInput] = useState("");
             }}>Resultat senden</button>
           }
           {questions.length - 1 > currentQuestionIndex &&
-            <button onClick={() => {
+            <button id="next-question-button" onClick={() => {
               setCurrentQuestionIndex(currentQuestionIndex + 1);
               setQuestionNotAnswered(true);
               setShowAnswerFeedback(false);
@@ -249,5 +249,5 @@ const [textAnswerInput, setTextAnswerInput] = useState("");
         </div>
       </div>}
     </div>
-  ); 
+  );
 }

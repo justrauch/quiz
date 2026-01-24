@@ -14,7 +14,9 @@ try:
 finally:
     connection.close()
 
-SQLALCHEMY_DATABASE_URL = "mysql+pymysql://root@localhost:3306/quiz"
+# True für Tests False für normalen Gebrauch
+is_test = False
+SQLALCHEMY_DATABASE_URL = f"mysql+pymysql://root@localhost:3306/quiz{"_test" if is_test else ""}"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
