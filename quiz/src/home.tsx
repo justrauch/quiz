@@ -105,7 +105,7 @@ export function Home(props: any) {
 
         {/* ---------------- Registrierungsformular ---------------- */}
         {showSignup && (
-          <form name="form-signup">
+          <form data-testid="form-signup">
             <div class="form-row">
               <label htmlFor="signup-username">Name:</label>
               <input
@@ -164,7 +164,7 @@ export function Home(props: any) {
 
         {/* ---------------- Loginformular ---------------- */}
         {showLogin && (
-          <form name="form-login">
+          <form data-testid="login-form">
             <div class="form-row">
               <label htmlFor="login-username">Name:</label>
               <input
@@ -189,6 +189,7 @@ export function Home(props: any) {
             <button
               type="button"
               name="btn-login-submit"
+              id = "btn-login-submit"
               class="myButton"
               disabled={loginUsername.trim() === "" || loginPassword.trim() === ""}
               onClick={e => {

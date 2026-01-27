@@ -61,7 +61,7 @@ class Score(Base):
     score = Column(String(50), nullable=False)
 
 # True für Tests False für normalen Gebrauch
-is_test = False
+is_test = True
 SQLALCHEMY_DATABASE_URL = f"mysql+pymysql://root@host.docker.internal:3306/quiz{"_test" if is_test else ""}"
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 

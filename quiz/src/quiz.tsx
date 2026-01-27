@@ -332,7 +332,7 @@ export function Quiz(props: any){
 
           {/* ---------------- Quiz erstellen ---------------- */}
           {!showQuizList && !showMyScores &&
-            <div id="create-quiz-section">
+            <div data-testid="create-quiz-section">
               <form id="create-quiz-form">
                 {showAddQuizError && (
                   <span id="add-quiz-error" style={{ color: "red" }}>
@@ -358,7 +358,7 @@ export function Quiz(props: any){
                     </label>
                   </div>
                 </div>
-                <button id="create-quiz-submit" type="button" class="myButton" onClick={(e) => {e.preventDefault(); addQuiz(quizNameInput, quizTimeInput);}} disabled={quizNameInput.trim() === ""}>Absenden</button>
+                <button name="create-quiz-submit" type="button" class="myButton" onClick={(e) => {e.preventDefault(); addQuiz(quizNameInput, quizTimeInput);}} disabled={quizNameInput.trim() === ""}>Absenden</button>
               </form>
             </div>
           }
